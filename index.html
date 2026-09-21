@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#07090c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DollarValue" />
+  <meta
+    name="description"
+    content="What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI."
+  />
+  <!--
+    iOS-full-bleed.txt Bug B: PWA uses fillH. Safari tab: visualViewport.
+    Never max-height:100dvh on PWA. Never position:fixed on html/body.
+  -->
+  <script>
+    (function () {
+      try {
+        var r = document.documentElement;
+        var n = window.navigator;
+        var host = location.hostname || "";
+        var local =
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          /^\d+\.\d+\.\d+\.\d+$/.test(host);
+        if (local && n.serviceWorker) {
+          n.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (reg) {
+              reg.unregister();
+            });
+          });
+          if (window.caches && caches.keys) {
+            caches.keys().then(function (keys) {
+              keys.forEach(function (k) {
+                caches.delete(k);
+              });
+            });
+          }
+        }
+        var standalone =
+          n.standalone === true ||
+          (window.matchMedia &&
+            (window.matchMedia("(display-mode: standalone)").matches ||
+              window.matchMedia("(display-mode: fullscreen)").matches ||
+              window.matchMedia("(display-mode: minimal-ui)").matches));
+        var vv = window.visualViewport;
+        var iw = window.innerWidth || 0;
+        var ih = window.innerHeight || 0;
+        var sw = (window.screen && window.screen.width) || 0;
+        var sh = (window.screen && window.screen.height) || 0;
+        var screenMax = Math.max(sw, sh);
+        var screenMin = Math.min(sw, sh);
+        if (standalone) {
+          r.classList.add("pwa-standalone");
+          var fillH = ih >= iw ? Math.max(ih, screenMax) : Math.max(ih, screenMin);
+          var extra = 0;
+          if (Math.min(iw, ih) >= 600 && screenMax < ih - 10) extra = 20;
+          var total = fillH + extra;
+          r.style.setProperty("--pwa-fill-h", fillH + "px");
+          r.style.setProperty("--pwa-extra-b", extra + "px");
+          r.style.setProperty("--vv-top", "0px");
+          r.style.setProperty("--vv-left", "0px");
+          r.style.setProperty("--vv-w", iw + "px");
+          r.style.setProperty("--vv-h", total + "px");
+          r.style.height = total + "px";
+          r.style.minHeight = total + "px";
+        } else if (vv && vv.height > 40 && vv.width > 40) {
+          r.style.setProperty("--vv-top", Math.max(0, Math.round(vv.offsetTop) || 0) + "px");
+          r.style.setProperty("--vv-left", Math.max(0, Math.round(vv.offsetLeft) || 0) + "px");
+          r.style.setProperty("--vv-w", Math.round(vv.width) + "px");
+          r.style.setProperty("--vv-h", Math.round(vv.height) + "px");
+        } else {
+          r.style.setProperty("--vv-top", "0px");
+          r.style.setProperty("--vv-left", "0px");
+          r.style.setProperty("--vv-w", iw + "px");
+          r.style.setProperty("--vv-h", ih + "px");
+        }
+        var EXPECTED = "v2";
+        window.__DV_EXPECTED = EXPECTED;
+      } catch (e) {}
+    })();
+  </script>
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Mark Maga" />
+  <meta property="og:title" content="DollarValue" />
+  <meta
+    property="og:description"
+    content="What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI."
+  />
+  <meta property="og:url" content="https://dollarvalue.markmaga.com/" />
+  <link rel="canonical" href="https://dollarvalue.markmaga.com/" />
+  <meta property="og:image" content="https://dollarvalue.markmaga.com/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="DollarValue" />
+  <meta
+    name="twitter:description"
+    content="What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI."
+  />
+  <meta name="twitter:image" content="https://dollarvalue.markmaga.com/icon-512.png" />
+  <title>DollarValue — several worths, not just CPI | Mark Maga</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css?v=2" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar" role="banner">
+      <div class="topbar-title">
+        <h1 class="brand-title">DollarValue</h1>
+        <span class="ver" id="verBadge" title="Build">v2</span>
+      </div>
+      <nav class="topbar-nav" aria-label="Primary">
+        <a class="nav-link" href="./about.html">About</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="hero" aria-live="polite">
+      <p class="hero-from" id="heroFrom"></p>
+      <p class="hero-to" id="heroTo"></p>
+      <p class="hero-by" id="heroBy"></p>
+      <p class="hero-check" id="heroCheck" hidden></p>
+    </section>
+
+    <section class="fan" id="fan" aria-label="Other yardsticks"></section>
+    <section class="work" id="work" hidden></section>
+    <section class="heat" id="heat" aria-label="Items versus yardstick"></section>
+
+    <section class="dials" aria-label="Wheels">
+      <div class="dial-pair">
+        <div class="dial">
+          <div class="dial-label">Then</div>
+          <div class="drums">
+            <div class="drum-shell"><div class="drum" id="drumThenYear" data-wheel="thenYear"></div></div>
+            <div class="drum-shell"><div class="drum drum-m" id="drumThenMonth" data-wheel="thenMonth"></div></div>
+          </div>
+        </div>
+        <div class="dial">
+          <div class="dial-label">Now</div>
+          <div class="drums">
+            <div class="drum-shell"><div class="drum" id="drumNowYear" data-wheel="nowYear"></div></div>
+            <div class="drum-shell"><div class="drum drum-m" id="drumNowMonth" data-wheel="nowMonth"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="dial-row">
+        <div class="dial dial-wide">
+          <div class="dial-label">Item</div>
+          <div class="drum-shell"><div class="drum drum-wide" id="drumItem" data-wheel="item"></div></div>
+        </div>
+        <div class="dial dial-wide">
+          <div class="dial-label">Yardstick</div>
+          <div class="drum-shell"><div class="drum drum-wide" id="drumYard" data-wheel="yard"></div></div>
+        </div>
+      </div>
+      <div class="amount" id="amountWrap" hidden>
+        <label for="amount">Amount</label>
+        <span class="amount-prefix">$</span>
+        <input
+          id="amount"
+          type="text"
+          inputmode="decimal"
+          enterkeyhint="done"
+          autocomplete="off"
+          value="1"
+        />
+      </div>
+    </section>
+  </div>
+  <script src="app.js?v=2" defer></script>
+</body>
+</html>
