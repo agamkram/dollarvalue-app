@@ -1,4 +1,4 @@
-const APP_VERSION = "v7";
+const APP_VERSION = "v8";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -200,16 +200,14 @@ function fmtMins(m) {
 }
 
 function renderHero(c) {
-  const fromTxt = c.it.typed
-    ? money(c.from) + " in " + whenLabel(state.thenYear, state.thenMonth)
-    : (c.from == null ? "—" : money(c.from)) +
-      (c.it.unit ? c.it.unit : "") +
-      " in " +
-      whenLabel(state.thenYear, state.thenMonth);
-  $("heroFrom").textContent = fromTxt;
+  const unit = c.it.unit || "";
+  $("heroFrom").textContent = c.it.typed
+    ? money(c.from)
+    : (c.from == null ? "—" : money(c.from)) + unit;
+  $("heroFromCap").textContent = whenLabel(state.thenYear, state.thenMonth);
   $("heroTo").textContent = money(c.expected);
   $("heroBy").textContent =
-    "by " + c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth);
+    c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth);
   const measure = $("heroMeasure");
   if (c.yd.unit) {
     measure.hidden = false;

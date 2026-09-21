@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 7;
+  --dv-css: 8;
 }
 
 *,
@@ -181,21 +181,27 @@ html.pwa-standalone .fit-stage {
   text-align: left;
 }
 
-.hero-from {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+.hero-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
 }
 
-.hero-to {
-  margin: 2px 0 0;
+.hero-amt {
+  margin: 0;
   font-family: var(--display);
-  font-size: clamp(1.35rem, 4.2vw, 2.1rem);
-  color: var(--gold);
+  font-size: clamp(1.15rem, 5.4vw, 1.85rem);
   letter-spacing: 0.02em;
   line-height: 1.12;
+  color: var(--text);
 }
 
+.hero-amt-now {
+  color: var(--gold);
+}
+
+.hero-cap,
 .hero-by,
 .hero-check {
   margin: 4px 0 0;

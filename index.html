@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v7";
+        var EXPECTED = "v8";
         window.__DV_EXPECTED = EXPECTED;
       } catch (e) {}
     })();
@@ -113,7 +113,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -121,7 +121,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v7</span>
+        <span class="ver" id="verBadge" title="Build">v8</span>
       </div>
       <nav class="topbar-nav" aria-label="Primary">
         <a class="nav-link" href="./about.html">About</a>
@@ -129,9 +129,16 @@
     </header>
 
     <section class="hero" id="hero" aria-live="polite">
-      <p class="hero-from" id="heroFrom"></p>
-      <p class="hero-to" id="heroTo"></p>
-      <p class="hero-by" id="heroBy"></p>
+      <div class="hero-pair">
+        <div class="hero-side">
+          <p class="hero-amt" id="heroFrom"></p>
+          <p class="hero-cap" id="heroFromCap"></p>
+        </div>
+        <div class="hero-side">
+          <p class="hero-amt hero-amt-now" id="heroTo"></p>
+          <p class="hero-cap" id="heroBy"></p>
+        </div>
+      </div>
       <p class="hero-measure" id="heroMeasure" hidden></p>
       <p class="hero-check" id="heroCheck" hidden></p>
     </section>
@@ -182,6 +189,6 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=7" defer></script>
+  <script src="app.js?v=8" defer></script>
 </body>
 </html>
