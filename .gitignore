@@ -12,6 +12,7 @@
 # Editor / tooling
 .vscode/
 *.swp
+.vercel
 
 # Python bytecode from scripts/
 __pycache__/

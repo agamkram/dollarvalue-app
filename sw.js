@@ -1,11 +1,11 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v10";
+const CACHE = "dollarvalue-v11";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((c) =>
-      c.addAll(["/", "/styles.css?v=10", "/app.js?v=10", "/data/series.json?v=10"])
+      c.addAll(["/", "/styles.css?v=11", "/app.js?v=11", "/data/series.json?v=11"])
     )
   );
 });
@@ -23,6 +23,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+  // Vercel Web Analytics is injected at the edge. Do not cache it.
+  if (new URL(req.url).pathname.startsWith("/_vercel/")) return;
   event.respondWith(
     fetch(req)
       .then((res) => {
