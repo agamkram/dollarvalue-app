@@ -1,4 +1,4 @@
-const APP_VERSION = "v3";
+const APP_VERSION = "v4";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -262,6 +262,7 @@ function renderAll() {
   renderFan(c);
   renderHeat(c);
   $("amountWrap").hidden = !itemMeta().typed;
+  sizeDrums();
 }
 
 function mountDrum(el, options, selectedId, onChange) {
@@ -343,6 +344,13 @@ function mountDrum(el, options, selectedId, onChange) {
         lock = false;
       }, 280);
     },
+    resnap() {
+      lock = true;
+      scrollToId(selectedId, false);
+      requestAnimationFrame(() => {
+        lock = false;
+      });
+    },
   };
 }
 
@@ -354,6 +362,8 @@ function yearsList() {
   for (let y = minY; y <= maxY; y++) out.push({ id: y, label: String(y) });
   return out;
 }
+
+const drums = [];
 
 function boot(data) {
   state.data = data;
@@ -371,30 +381,43 @@ function boot(data) {
   const iOpts = ITEMS.map((it) => ({ id: it.id, label: it.name }));
   const ydOpts = YARDS.map((y) => ({ id: y.id, label: y.name }));
 
-  mountDrum($("drumThenYear"), yOpts, state.thenYear, (id) => {
-    state.thenYear = Number(id);
-    renderAll();
-  });
-  mountDrum($("drumNowYear"), yOpts, state.nowYear, (id) => {
-    state.nowYear = Number(id);
-    renderAll();
-  });
-  mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
-    state.thenMonth = Number(id);
-    renderAll();
-  });
-  mountDrum($("drumNowMonth"), mOpts, state.nowMonth, (id) => {
-    state.nowMonth = Number(id);
-    renderAll();
-  });
-  mountDrum($("drumItem"), iOpts, state.item, (id) => {
-    state.item = String(id);
-    renderAll();
-  });
-  mountDrum($("drumYard"), ydOpts, state.yard, (id) => {
-    state.yard = String(id);
-    renderAll();
-  });
+  drums.length = 0;
+  drums.push(
+    mountDrum($("drumThenYear"), yOpts, state.thenYear, (id) => {
+      state.thenYear = Number(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumNowYear"), yOpts, state.nowYear, (id) => {
+      state.nowYear = Number(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
+      state.thenMonth = Number(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumNowMonth"), mOpts, state.nowMonth, (id) => {
+      state.nowMonth = Number(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumItem"), iOpts, state.item, (id) => {
+      state.item = String(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumYard"), ydOpts, state.yard, (id) => {
+      state.yard = String(id);
+      renderAll();
+    })
+  );
 
   const amt = $("amount");
   amt.addEventListener("input", () => {
@@ -406,6 +429,8 @@ function boot(data) {
     if (e.key === "Enter") amt.blur();
   });
 
+  lastDrumH = 0;
+  pinShellViewport();
   renderAll();
 }
 
@@ -424,4 +449,113 @@ fetch("data/series.json?v=1")
 
 if ("serviceWorker" in navigator && !localHost()) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+function isStandaloneDisplay() {
+  const n = window.navigator;
+  return (
+    n.standalone === true ||
+    (window.matchMedia &&
+      (window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.matchMedia("(display-mode: minimal-ui)").matches))
+  );
+}
+
+function pwaFillHeightPx() {
+  const iw = window.innerWidth || 0;
+  const ih = window.innerHeight || 0;
+  const sw = (window.screen && window.screen.width) || 0;
+  const sh = (window.screen && window.screen.height) || 0;
+  const screenMax = Math.max(sw, sh);
+  const screenMin = Math.min(sw, sh);
+  return ih >= iw ? Math.max(ih, screenMax) : Math.max(ih, screenMin);
+}
+
+function pwaExtraBottomPx() {
+  const iw = window.innerWidth || 0;
+  const ih = window.innerHeight || 0;
+  const sw = (window.screen && window.screen.width) || 0;
+  const sh = (window.screen && window.screen.height) || 0;
+  const screenMax = Math.max(sw, sh);
+  if (Math.min(iw, ih) >= 600 && screenMax < ih - 10) return 20;
+  return 0;
+}
+
+let lastFillKey = "";
+let lastDrumH = 0;
+
+function pinShellViewport() {
+  const root = document.documentElement;
+  const standalone = isStandaloneDisplay() || root.classList.contains("pwa-standalone");
+  if (standalone) {
+    const fillH = pwaFillHeightPx();
+    const extra = pwaExtraBottomPx();
+    const total = fillH + extra;
+    const key = "pwa:" + fillH + "+" + extra;
+    root.classList.add("pwa-standalone");
+    if (key !== lastFillKey) {
+      lastFillKey = key;
+      root.style.setProperty("--pwa-fill-h", fillH + "px");
+      root.style.setProperty("--pwa-extra-b", extra + "px");
+      root.style.setProperty("--vv-top", "0px");
+      root.style.setProperty("--vv-left", "0px");
+      root.style.setProperty("--vv-w", (window.innerWidth || 0) + "px");
+      root.style.setProperty("--vv-h", total + "px");
+      root.style.height = total + "px";
+      root.style.minHeight = total + "px";
+    }
+    sizeDrums();
+    return;
+  }
+
+  root.classList.remove("pwa-standalone");
+  root.style.removeProperty("--pwa-fill-h");
+  root.style.removeProperty("--pwa-extra-b");
+  root.style.removeProperty("height");
+  root.style.removeProperty("min-height");
+
+  const vv = window.visualViewport;
+  const iw = window.innerWidth || 0;
+  const ih = window.innerHeight || 0;
+  let top = 0;
+  let left = 0;
+  let width = iw;
+  let height = ih;
+  if (vv && vv.height > 40 && vv.width > 40) {
+    top = Math.max(0, Math.round(vv.offsetTop) || 0);
+    left = Math.max(0, Math.round(vv.offsetLeft) || 0);
+    width = Math.round(vv.width);
+    height = Math.round(vv.height);
+  }
+  const key = "vv:" + top + "," + left + "," + width + "x" + height;
+  if (key !== lastFillKey) {
+    lastFillKey = key;
+    root.style.setProperty("--vv-top", top + "px");
+    root.style.setProperty("--vv-left", left + "px");
+    root.style.setProperty("--vv-w", width + "px");
+    root.style.setProperty("--vv-h", height + "px");
+  }
+  sizeDrums();
+}
+
+function sizeDrums() {
+  const shell = document.querySelector(".drum-shell");
+  if (!shell) return;
+  const h = Math.round(shell.getBoundingClientRect().height);
+  if (h < 48 || h === lastDrumH) return;
+  lastDrumH = h;
+  document.documentElement.style.setProperty("--drum-h", h + "px");
+  drums.forEach((d) => d.resnap());
+}
+
+function onViewport() {
+  pinShellViewport();
+}
+
+pinShellViewport();
+window.addEventListener("resize", onViewport);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", onViewport);
+  window.visualViewport.addEventListener("scroll", onViewport);
 }
