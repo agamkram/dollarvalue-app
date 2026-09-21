@@ -1,4 +1,4 @@
-const APP_VERSION = "v9";
+const APP_VERSION = "v10";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -41,20 +41,20 @@ const ITEMS = [
   { id: "bread", name: "White bread", unit: "/lb", series: "bread", kind: "commodity" },
   { id: "coffee", name: "Coffee", unit: "/lb", series: "coffee", kind: "commodity" },
   { id: "gasoline", name: "Gasoline", unit: "/gal", series: "gasoline", kind: "commodity" },
-  { id: "electricity", name: "Electricity", series: "electricity", kind: "commodity" },
+  { id: "electricity", name: "Electricity", unit: "/kWh", series: "electricity", kind: "commodity" },
   { id: "wti", name: "WTI oil", unit: "/bbl", series: "wti", kind: "commodity" },
   { id: "gold", name: "Gold", unit: "/oz", series: "gold", kind: "commodity" },
   { id: "silver_spot", name: "Silver", unit: "/oz", series: "silver_spot", kind: "commodity" },
   { id: "bitcoin", name: "Bitcoin", series: "bitcoin", kind: "asset" },
   { id: "wage_hourly", name: "Hourly wage", series: "wage_hourly", kind: "income" },
-  { id: "rent", name: "Rent index", series: "rent", kind: "commodity" },
-  { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "asset" },
-  { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "asset" },
-  { id: "college", name: "College tuition", series: "college", kind: "commodity" },
-  { id: "medical", name: "Medical care", series: "medical", kind: "commodity" },
-  { id: "used_cars", name: "Used cars", series: "used_cars", kind: "commodity" },
-  { id: "nasdaq", name: "NASDAQ", series: "nasdaq", kind: "asset" },
-  { id: "stocks", name: "S&P 500", series: "stocks", kind: "asset" },
+  { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false },
+  { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "index", dollars: false },
+  { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "index", dollars: false },
+  { id: "college", name: "College index", series: "college", kind: "index", dollars: false },
+  { id: "medical", name: "Medical index", series: "medical", kind: "index", dollars: false },
+  { id: "used_cars", name: "Used car index", series: "used_cars", kind: "index", dollars: false },
+  { id: "nasdaq", name: "NASDAQ", series: "nasdaq", kind: "index", dollars: false },
+  { id: "stocks", name: "S&P 500", series: "stocks", kind: "index", dollars: false },
 ];
 
 const state = {
@@ -88,12 +88,40 @@ function atMonth(ser, year, month) {
   if (!ser) return null;
   if (!month) return atYear(ser, year);
   const row = ser.monthly && ser.monthly[String(year)];
-  if (!row) return atYear(ser, year);
+  if (!row) return null;
   const v = row[month - 1];
-  return v == null ? atYear(ser, year) : v;
+  return v == null ? null : v;
+}
+
+function inferFreq(ser) {
+  const rows = ser && ser.monthly ? Object.values(ser.monthly) : [];
+  const used = {};
+  rows.forEach((row) => {
+    row.forEach((v, i) => {
+      if (v != null) used[i] = true;
+    });
+  });
+  const months = Object.keys(used).map(Number);
+  if (!months.length) return "annual";
+  if (months.every((i) => i === 0 || i === 3 || i === 6 || i === 9)) return "quarterly";
+  return "monthly";
+}
+
+function crossesM1Break(y0, m0, y1, m1) {
+  const breakAt = 2020 * 12 + 5;
+  function mark(y, m) {
+    if (y === 2020 && !m) return null;
+    if (!m) return y * 12 + 6;
+    return y * 12 + m;
+  }
+  const a = mark(y0, m0);
+  const b = mark(y1, m1);
+  if (a == null || b == null) return true;
+  return Math.min(a, b) < breakAt && Math.max(a, b) >= breakAt;
 }
 
 function scale(yardId, y0, m0, y1, m1) {
+  if (yardId === "m1" && crossesM1Break(y0, m0, y1, m1)) return null;
   const ser = seriesOf(yardId);
   const a = atMonth(ser, y0, m0);
   const b = atMonth(ser, y1, m1);
@@ -138,9 +166,46 @@ function nowActual() {
   return atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
 }
 
-function whenLabel(year, month) {
-  if (!month) return String(year);
+function yearPartial(ser, year) {
+  if (!ser || !ser.years || ser.years[ser.years.length - 1] !== year) return false;
+  const row = ser.monthly && ser.monthly[String(year)];
+  if (!row || ser.freq === "annual") return false;
+  const idx =
+    ser.freq === "quarterly"
+      ? [0, 3, 6, 9]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const slots = idx.map((i) => row[i]);
+  const n = slots.filter((v) => v != null).length;
+  if (!n || n === slots.length) return false;
+  return slots[slots.length - 1] == null;
+}
+
+function whenLabel(year, month, ser) {
+  if (!month) return yearPartial(ser, year) ? year + " YTD" : String(year);
   return MONTHS[month].label + " " + year;
+}
+
+function gapNote(ser, year, month, label) {
+  if (!ser || !month) return "";
+  if (atYear(ser, year) == null) return "";
+  if (atMonth(ser, year, month) != null) return "";
+  const name = label || ser.name;
+  if (ser.freq === "annual") return name + " is annual";
+  if (ser.freq === "quarterly") return name + " is quarterly";
+  return name + " has no " + MONTHS[month].label + " print";
+}
+
+function explainGap(ser, label) {
+  if (!ser) return "";
+  return (
+    gapNote(ser, state.thenYear, state.thenMonth, label) ||
+    gapNote(ser, state.nowYear, state.nowMonth, label)
+  );
+}
+
+function fmtPlain(n, dollars) {
+  if (n == null || !isFinite(n)) return "—";
+  return dollars === false ? fmtMeasure(n) : money(n);
 }
 
 function compute() {
@@ -154,12 +219,14 @@ function compute() {
     expected != null && actual != null && expected !== 0
       ? ((actual - expected) / expected) * 100
       : null;
+  const priced = it.dollars !== false;
   const wage0 = atMonth(seriesOf("wage_hourly"), state.thenYear, state.thenMonth);
   const wage1 = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
-  const mins0 = from != null && wage0 ? (from / wage0) * 60 : null;
-  const mins1 =
-    (actual != null && wage1 ? (actual / wage1) * 60 : null) ??
-    (expected != null && wage1 ? (expected / wage1) * 60 : null);
+  const mins0 = priced && from != null && wage0 ? (from / wage0) * 60 : null;
+  const mins1 = priced
+    ? (actual != null && wage1 ? (actual / wage1) * 60 : null) ??
+      (expected != null && wage1 ? (expected / wage1) * 60 : null)
+    : null;
   let u0 = null;
   let u1 = null;
   if (yd.unit) {
@@ -200,16 +267,33 @@ function fmtMins(m) {
 }
 
 function renderHero(c) {
-  const unit = c.it.unit || "";
-  $("heroFrom").textContent = c.it.typed
-    ? money(c.from)
-    : (c.from == null ? "—" : money(c.from)) + unit;
-  $("heroFromCap").textContent = whenLabel(state.thenYear, state.thenMonth);
-  $("heroTo").textContent = money(c.expected);
+  const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
+  const fromTxt = fmtPlain(c.from, c.it.dollars);
+  $("heroFrom").textContent = fromTxt === "—" ? "—" : fromTxt + unit;
+  $("heroFromCap").textContent = whenLabel(
+    state.thenYear,
+    state.thenMonth,
+    c.it.typed ? null : seriesOf(c.it.series || c.it.id)
+  );
+  $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
   $("heroBy").textContent =
-    c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth);
+    c.yd.name +
+    " · " +
+    whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id));
+  const yardSer = seriesOf(c.yd.id);
+  const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
+  const m1Note =
+    c.yd.id === "m1" &&
+    c.ratio == null &&
+    crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)
+      ? "M1 redefined May 2020"
+      : "";
+  const note = m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
   const measure = $("heroMeasure");
-  if (c.yd.unit) {
+  if (note) {
+    measure.hidden = false;
+    measure.textContent = note;
+  } else if (c.yd.unit) {
     measure.hidden = false;
     measure.textContent =
       fmtMeasure(c.u0) +
@@ -229,10 +313,13 @@ function renderHero(c) {
   if (c.actual != null && c.vs != null) {
     side.hidden = false;
     pair.classList.add("is-three");
-    $("heroActual").textContent = money(c.actual) + unit;
+    $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars) + unit;
     check.className =
       "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
-    check.textContent = "Actual · " + pct(c.vs);
+    const actualYtd =
+      !state.nowMonth &&
+      yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
+    check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
   } else {
     side.hidden = true;
     pair.classList.remove("is-three");
@@ -242,7 +329,7 @@ function renderHero(c) {
   }
 
   const work = $("work");
-  if (c.mins0 != null) {
+  if (c.it.dollars !== false && c.mins0 != null) {
     work.hidden = false;
     work.textContent =
       "Work time  " +
@@ -257,9 +344,16 @@ function renderHero(c) {
 
 function renderFan(c) {
   const el = $("fan");
+  const dollars = c.it.dollars !== false;
   el.innerHTML = YARDS.map((y) => {
     const r = scale(y.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
     const v = c.from != null && r != null ? c.from * r : null;
+    const redefined =
+      y.id === "m1" &&
+      v == null &&
+      atMonth(seriesOf("m1"), state.thenYear, state.thenMonth) != null &&
+      atMonth(seriesOf("m1"), state.nowYear, state.nowMonth) != null &&
+      crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
     const on = y.id === state.yard ? " is-on" : "";
     const miss = v == null ? " is-miss" : "";
     return (
@@ -270,7 +364,7 @@ function renderFan(c) {
       '</span><span class="fan-v' +
       miss +
       '">' +
-      money(v) +
+      (redefined ? "redefined" : fmtPlain(v, dollars)) +
       "</span></div>"
     );
   }).join("");
@@ -413,6 +507,9 @@ const drums = [];
 
 function boot(data) {
   state.data = data;
+  Object.keys(data.series || {}).forEach((id) => {
+    data.series[id].freq = inferFreq(data.series[id]);
+  });
   const years = yearsList();
   const last = years[years.length - 1].id;
   state.nowYear = last;
@@ -485,7 +582,7 @@ function localHost() {
   return h === "localhost" || h === "127.0.0.1" || /^\d+\.\d+\.\d+\.\d+$/.test(h);
 }
 
-fetch("data/series.json?v=1")
+fetch("data/series.json?v=" + APP_VERSION.slice(1))
   .then((r) => r.json())
   .then(boot)
   .catch((err) => {

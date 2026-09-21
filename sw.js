@@ -1,11 +1,11 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v9";
+const CACHE = "dollarvalue-v10";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((c) =>
-      c.addAll(["/?v=9", "/styles.css?v=9", "/app.js?v=9", "/data/series.json?v=9"])
+      c.addAll(["/", "/styles.css?v=10", "/app.js?v=10", "/data/series.json?v=10"])
     )
   );
 });
@@ -26,8 +26,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        if (res.ok && new URL(req.url).origin === self.location.origin) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        }
         return res;
       })
       .catch(() => caches.match(req))

@@ -15,7 +15,7 @@ import time
 import urllib.parse
 import urllib.request
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,19 +30,15 @@ FRED_SERIES = [
     ("chained_cpi", "SUUR0000SA0", "Chained CPI", "price", "BLS via FRED"),
     ("gdp", "GDPA", "GDP", "output", "BEA via FRED"),
     ("gdp_per_capita", "A939RC0Q052SBEA", "GDP per capita", "income", "BEA via FRED"),
-    ("silver_nber", "A04018GB00LONA286NNBR", "Silver (London, NBER)", "numeraire", "NBER via FRED"),
     ("college", "CUUR0000SEEB", "College tuition", "price", "BLS via FRED"),
     ("nasdaq", "NASDAQCOM", "NASDAQ", "asset", "FRED"),
-    ("djia", "DJIA", "DJIA", "asset", "FRED"),
     ("m2", "M2SL", "M2", "money", "Fed via FRED"),
     ("m1", "M1SL", "M1", "money", "Fed via FRED"),
     ("base", "BOGMBASE", "Monetary base", "money", "Fed via FRED"),
     ("mzm", "MZMSL", "MZM", "money", "Fed via FRED"),
     ("dxy", "DTWEXBGS", "Broad dollar", "numeraire", "Fed via FRED"),
     ("wti", "WTISPLC", "WTI oil", "commodity", "FRED"),
-    ("gas_eia", "GASREGW", "Gasoline (EIA)", "commodity", "EIA via FRED"),
     ("wage_hourly", "AHETPI", "Production hourly wage", "income", "BLS via FRED"),
-    ("wage_all", "CES0500000003", "Average hourly earnings", "income", "BLS via FRED"),
     ("stocks", "SP500", "S&P 500", "asset", "FRED"),
     ("bitcoin", "CBBTCUSD", "Bitcoin", "numeraire", "Coinbase via FRED"),
     ("milk", "APU0000702111", "Milk", "commodity", "BLS Average Price"),
@@ -56,8 +52,6 @@ FRED_SERIES = [
     ("rent", "CUUR0000SEHA", "Rent of primary residence", "price", "BLS via FRED"),
     ("medical", "CUUR0000SAM2", "Medical care", "price", "BLS via FRED"),
     ("used_cars", "CUUR0000SETA02", "Used cars", "price", "BLS via FRED"),
-    ("sticky_cpi", "STICKCPIM159SFRBATL", "Sticky CPI", "price", "Atlanta Fed"),
-    ("median_cpi", "MEDCPIM159SFRBCLE", "Median CPI", "price", "Cleveland Fed"),
 ]
 
 
@@ -123,7 +117,20 @@ def pack_obs(obs: list[tuple[str, float]]) -> dict:
         annual.append(round(statistics.mean(vals), 6))
     # Drop empty monthly years
     monthly = {k: v for k, v in monthly.items() if any(x is not None for x in v)}
-    return {"years": years, "annual": annual, "monthly": monthly}
+    return collapse_annual({"years": years, "annual": annual, "monthly": monthly})
+
+
+def collapse_annual(packed: dict) -> dict:
+    """A yearly FRED observation is dated January 1. That is not a January print."""
+    mon = packed.get("monthly") or {}
+    if not mon:
+        packed["monthly"] = {}
+        return packed
+    for row in mon.values():
+        if any(v is not None for i, v in enumerate(row) if i != 0):
+            return packed
+    packed["monthly"] = {}
+    return packed
 
 
 def bls_window(sid: str, start: int, end: int) -> list[dict]:
@@ -204,7 +211,7 @@ def yahoo_monthly(symbol: str) -> list[tuple[str, float]]:
     for t, v in zip(ts, closes):
         if v is None:
             continue
-        d = date.fromtimestamp(int(t))
+        d = datetime.fromtimestamp(int(t), timezone.utc).date()
         out.append(("%04d-%02d-01" % (d.year, d.month), float(v)))
     return out
 
@@ -223,6 +230,36 @@ def ssa_awi() -> dict[int, float]:
         if 1950 <= yi <= 2030:
             out[yi] = float(v.replace(",", ""))
     return out
+
+
+def splice_gold(series: dict) -> None:
+    """Official par through 1973, COMEX after. The 1974–1999 gap stays empty."""
+    if "gold_official" not in series:
+        return
+    go = series["gold_official"]
+    gs = series.get("gold_spot")
+    years = list(go["years"])
+    annual = list(go["annual"])
+    monthly: dict = {}
+    if gs:
+        for y, v in zip(gs["years"], gs["annual"]):
+            if y <= 1973:
+                continue
+            if y in years:
+                annual[years.index(y)] = v
+            else:
+                years.append(y)
+                annual.append(v)
+        monthly = dict(gs.get("monthly") or {})
+    series["gold"] = {
+        "id": "gold",
+        "name": "Gold",
+        "kind": "numeraire",
+        "source": "US official par to 1973, COMEX from 2000",
+        "years": years,
+        "annual": [round(float(v), 6) for v in annual],
+        "monthly": monthly,
+    }
 
 
 def main() -> None:
@@ -350,32 +387,7 @@ def main() -> None:
         except Exception as e:
             print("  FAIL cpi splice:", e)
 
-    # Gold: official par until 1973, COMEX after 2000. Gap is visible, not filled.
-    if "gold_official" in series:
-        go = series["gold_official"]
-        gs = series.get("gold_spot")
-        years = list(go["years"])
-        annual = list(go["annual"])
-        monthly = {}
-        if gs:
-            for y, v in zip(gs["years"], gs["annual"]):
-                if y <= 1973:
-                    continue
-                if y in years:
-                    annual[years.index(y)] = v
-                else:
-                    years.append(y)
-                    annual.append(v)
-            monthly = dict(gs.get("monthly") or {})
-        series["gold"] = {
-            "id": "gold",
-            "name": "Gold",
-            "kind": "numeraire",
-            "source": "US official par to 1973, COMEX from 2000",
-            "years": years,
-            "annual": [round(v, 6) for v in annual],
-            "monthly": monthly,
-        }
+    splice_gold(series)
 
     payload = {
         "baked": date.today().isoformat(),
