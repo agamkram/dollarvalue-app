@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 8;
+  --dv-css: 9;
 }
 
 *,
@@ -188,6 +188,11 @@ html.pwa-standalone .fit-stage {
   align-items: start;
 }
 
+.hero-pair.is-three {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
 .hero-amt {
   margin: 0;
   font-family: var(--display);
@@ -195,18 +200,28 @@ html.pwa-standalone .fit-stage {
   letter-spacing: 0.02em;
   line-height: 1.12;
   color: var(--text);
+  white-space: nowrap;
+}
+
+.hero-pair.is-three .hero-amt {
+  font-size: clamp(1rem, 4.4vw, 1.65rem);
 }
 
 .hero-amt-now {
   color: var(--gold);
 }
 
-.hero-cap,
-.hero-by,
-.hero-check {
+.hero-cap {
   margin: 4px 0 0;
   font-size: 0.68rem;
   color: var(--muted);
+}
+
+.hero-cap.is-hot {
+  color: var(--red);
+}
+.hero-cap.is-cool {
+  color: var(--green);
 }
 
 .hero-measure {
@@ -215,13 +230,6 @@ html.pwa-standalone .fit-stage {
   font-size: 0.72rem;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-}
-
-.hero-check.is-hot {
-  color: var(--red);
-}
-.hero-check.is-cool {
-  color: var(--green);
 }
 
 .fan {

@@ -1,4 +1,4 @@
-const APP_VERSION = "v8";
+const APP_VERSION = "v9";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -224,19 +224,21 @@ function renderHero(c) {
     measure.hidden = true;
   }
   const check = $("heroCheck");
+  const side = $("heroActualSide");
+  const pair = $("heroPair");
   if (c.actual != null && c.vs != null) {
-    check.hidden = false;
+    side.hidden = false;
+    pair.classList.add("is-three");
+    $("heroActual").textContent = money(c.actual) + unit;
     check.className =
-      "hero-check " + (c.vs > 8 ? "is-hot" : c.vs < -8 ? "is-cool" : "");
-    check.textContent =
-      "Actual " +
-      money(c.actual) +
-      (c.it.unit || "") +
-      " · " +
-      pct(c.vs) +
-      " vs this yardstick";
+      "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
+    check.textContent = "Actual · " + pct(c.vs);
   } else {
-    check.hidden = true;
+    side.hidden = true;
+    pair.classList.remove("is-three");
+    $("heroActual").textContent = "";
+    check.className = "hero-cap";
+    check.textContent = "";
   }
 
   const work = $("work");
