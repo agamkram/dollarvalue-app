@@ -1,4 +1,4 @@
-const APP_VERSION = "v4";
+const APP_VERSION = "v5";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -24,13 +24,14 @@ const YARDS = [
   { id: "wage_hourly", name: "Hourly wage", hint: "Production worker pay" },
   { id: "gdp_per_capita", name: "GDP per capita", hint: "Average output per person" },
   { id: "gdp", name: "Share of GDP", hint: "How big vs the whole economy" },
-  { id: "gold", name: "Gold", hint: "Official par, then COMEX" },
+  { id: "gold", name: "Gold", hint: "Official par, then COMEX", unit: "oz" },
+  { id: "silver_spot", name: "Silver", hint: "Spot ounce", unit: "oz" },
   { id: "m2", name: "M2", hint: "Broad money" },
   { id: "m1", name: "M1", hint: "Narrow money" },
   { id: "base", name: "Monetary base", hint: "Fed’s balance-sheet dollars" },
   { id: "mzm", name: "MZM", hint: "Money at zero maturity" },
   { id: "dxy", name: "Broad dollar", hint: "Dollar vs other currencies" },
-  { id: "bitcoin", name: "Bitcoin", hint: "Priced in BTC" },
+  { id: "bitcoin", name: "Bitcoin", hint: "Priced in BTC", unit: "BTC" },
 ];
 
 const ITEMS = [
@@ -159,7 +160,37 @@ function compute() {
   const mins1 =
     (actual != null && wage1 ? (actual / wage1) * 60 : null) ??
     (expected != null && wage1 ? (expected / wage1) * 60 : null);
-  return { it, yd, from, ratio, expected, actual, vs, mins0, mins1 };
+  let u0 = null;
+  let u1 = null;
+  if (yd.unit) {
+    const px0 = atMonth(seriesOf(yd.id), state.thenYear, state.thenMonth);
+    const px1 = atMonth(seriesOf(yd.id), state.nowYear, state.nowMonth);
+    const nowDollars = it.typed ? from : actual;
+    if (from != null && px0) u0 = from / px0;
+    if (nowDollars != null && px1) u1 = nowDollars / px1;
+  }
+  return { it, yd, from, ratio, expected, actual, vs, mins0, mins1, u0, u1 };
+}
+
+function fmtMeasure(n) {
+  if (n == null || !isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  let d = 2;
+  if (abs >= 100) d = 0;
+  else if (abs >= 10) d = 1;
+  else if (abs >= 1) d = 2;
+  else if (abs >= 0.1) d = 3;
+  else if (abs >= 0.01) d = 4;
+  else if (abs >= 0.001) d = 5;
+  else d = 6;
+  return (
+    sign +
+    abs.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: d,
+    })
+  );
 }
 
 function fmtMins(m) {
@@ -179,6 +210,21 @@ function renderHero(c) {
   $("heroTo").textContent = money(c.expected);
   $("heroBy").textContent =
     "by " + c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth);
+  const measure = $("heroMeasure");
+  if (c.yd.unit) {
+    measure.hidden = false;
+    measure.textContent =
+      fmtMeasure(c.u0) +
+      " " +
+      c.yd.unit +
+      " then  →  " +
+      fmtMeasure(c.u1) +
+      " " +
+      c.yd.unit +
+      " now";
+  } else {
+    measure.hidden = true;
+  }
   const check = $("heroCheck");
   if (c.actual != null && c.vs != null) {
     check.hidden = false;
