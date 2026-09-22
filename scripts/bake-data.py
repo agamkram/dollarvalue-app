@@ -42,7 +42,6 @@ FRED_SERIES = [
     ("bitcoin", "CBBTCUSD", "Bitcoin", "numeraire", "Coinbase via FRED"),
     ("milk", "APU0000702111", "Milk", "commodity", "BLS Average Price"),
     ("eggs", "APU0000708111", "Eggs", "commodity", "BLS Average Price"),
-    ("bread", "APU0000702112", "White bread", "commodity", "BLS Average Price"),
     ("coffee", "APU0000709112", "Coffee", "commodity", "BLS Average Price"),
     ("gasoline", "APU000074714", "Gasoline", "commodity", "BLS Average Price"),
     ("electricity", "APU000072610", "Electricity", "commodity", "BLS Average Price"),

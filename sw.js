@@ -1,11 +1,11 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v12";
+const CACHE = "dollarvalue-v13";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((c) =>
-      c.addAll(["/", "/styles.css?v=12", "/app.js?v=12", "/data/series.json?v=12"])
+      c.addAll(["/", "/styles.css?v=13", "/app.js?v=13", "/data/series.json?v=13"])
     )
   );
 });

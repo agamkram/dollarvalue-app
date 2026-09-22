@@ -1,4 +1,4 @@
-const APP_VERSION = "v12";
+const APP_VERSION = "v13";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -37,7 +37,6 @@ const ITEMS = [
   { id: "custom", name: "Custom $", typed: true, kind: "commodity" },
   { id: "milk", name: "Milk", unit: "/gal", series: "milk", kind: "commodity" },
   { id: "eggs", name: "Eggs", unit: "/doz", series: "eggs", kind: "commodity" },
-  { id: "bread", name: "White bread", unit: "/lb", series: "bread", kind: "commodity" },
   { id: "coffee", name: "Coffee", unit: "/lb", series: "coffee", kind: "commodity" },
   { id: "gasoline", name: "Gasoline", unit: "/gal", series: "gasoline", kind: "commodity" },
   { id: "electricity", name: "Electricity", unit: "/kWh", series: "electricity", kind: "commodity" },
