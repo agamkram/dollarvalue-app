@@ -35,7 +35,6 @@ FRED_SERIES = [
     ("m2", "M2SL", "M2", "money", "Fed via FRED"),
     ("m1", "M1SL", "M1", "money", "Fed via FRED"),
     ("base", "BOGMBASE", "Monetary base", "money", "Fed via FRED"),
-    ("mzm", "MZMSL", "MZM", "money", "Fed via FRED"),
     ("dxy", "DTWEXBGS", "Broad dollar", "numeraire", "Fed via FRED"),
     ("wti", "WTISPLC", "WTI oil", "commodity", "FRED"),
     ("wage_hourly", "AHETPI", "Production hourly wage", "income", "BLS via FRED"),

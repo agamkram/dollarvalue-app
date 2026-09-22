@@ -1,4 +1,4 @@
-const APP_VERSION = "v11";
+const APP_VERSION = "v12";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -29,7 +29,6 @@ const YARDS = [
   { id: "m2", name: "M2", hint: "Broad money" },
   { id: "m1", name: "M1", hint: "Narrow money" },
   { id: "base", name: "Monetary base", hint: "Fed’s balance-sheet dollars" },
-  { id: "mzm", name: "MZM", hint: "Money at zero maturity" },
   { id: "dxy", name: "Broad dollar", hint: "Dollar vs other currencies" },
   { id: "bitcoin", name: "Bitcoin", hint: "Priced in BTC", unit: "BTC" },
 ];
