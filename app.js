@@ -1,4 +1,4 @@
-const APP_VERSION = "v13";
+const APP_VERSION = "v11";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -220,20 +220,23 @@ function compute() {
       ? ((actual - expected) / expected) * 100
       : null;
   const priced = it.dollars !== false;
-  const numNow = it.typed ? from : actual;
   const wage0 = atMonth(seriesOf("wage_hourly"), state.thenYear, state.thenMonth);
   const wage1 = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
   const mins0 = priced && from != null && wage0 ? (from / wage0) * 60 : null;
-  const mins1 = priced && numNow != null && wage1 ? (numNow / wage1) * 60 : null;
+  const mins1 = priced
+    ? (actual != null && wage1 ? (actual / wage1) * 60 : null) ??
+      (expected != null && wage1 ? (expected / wage1) * 60 : null)
+    : null;
   let u0 = null;
   let u1 = null;
   if (yd.unit) {
     const px0 = atMonth(seriesOf(yd.id), state.thenYear, state.thenMonth);
     const px1 = atMonth(seriesOf(yd.id), state.nowYear, state.nowMonth);
+    const nowDollars = it.typed ? from : actual;
     if (from != null && px0) u0 = from / px0;
-    if (numNow != null && px1) u1 = numNow / px1;
+    if (nowDollars != null && px1) u1 = nowDollars / px1;
   }
-  return { it, yd, from, ratio, expected, actual, vs, mins0, mins1, u0, u1, numNow };
+  return { it, yd, from, ratio, expected, actual, vs, mins0, mins1, u0, u1 };
 }
 
 function fmtMeasure(n) {
@@ -263,7 +266,20 @@ function fmtMins(m) {
   return Math.round(m) + " min";
 }
 
-function stickNote(c) {
+function renderHero(c) {
+  const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
+  const fromTxt = fmtPlain(c.from, c.it.dollars);
+  $("heroFrom").textContent = fromTxt === "—" ? "—" : fromTxt + unit;
+  $("heroFromCap").textContent = whenLabel(
+    state.thenYear,
+    state.thenMonth,
+    c.it.typed ? null : seriesOf(c.it.series || c.it.id)
+  );
+  $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
+  $("heroBy").textContent =
+    c.yd.name +
+    " · " +
+    whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id));
   const yardSer = seriesOf(c.yd.id);
   const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
   const m1Note =
@@ -272,102 +288,48 @@ function stickNote(c) {
     crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)
       ? "M1 redefined May 2020"
       : "";
-  return m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
-}
-
-function conversionLine(c) {
-  const u = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
-  const left = fmtPlain(c.from, c.it.dollars);
-  const right = fmtPlain(c.numNow, c.it.dollars);
-  const l = left === "—" ? "—" : left + u;
-  const r = right === "—" ? "—" : right + u;
-  return l + " then  →  " + r + " now";
-}
-
-function setChange(chg) {
+  const note = m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
+  const measure = $("heroMeasure");
+  if (note) {
+    measure.hidden = false;
+    measure.textContent = note;
+  } else if (c.yd.unit) {
+    measure.hidden = false;
+    measure.textContent =
+      fmtMeasure(c.u0) +
+      " " +
+      c.yd.unit +
+      " then  →  " +
+      fmtMeasure(c.u1) +
+      " " +
+      c.yd.unit +
+      " now";
+  } else {
+    measure.hidden = true;
+  }
   const check = $("heroCheck");
   const side = $("heroActualSide");
   const pair = $("heroPair");
-  if (chg == null || !isFinite(chg)) {
+  if (c.actual != null && c.vs != null) {
+    side.hidden = false;
+    pair.classList.add("is-three");
+    $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars) + unit;
+    check.className =
+      "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
+    const actualYtd =
+      !state.nowMonth &&
+      yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
+    check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
+  } else {
     side.hidden = true;
     pair.classList.remove("is-three");
     $("heroActual").textContent = "";
     check.className = "hero-cap";
     check.textContent = "";
-    return;
-  }
-  side.hidden = false;
-  pair.classList.add("is-three");
-  $("heroActual").textContent = pct(chg);
-  check.className = "hero-cap" + (chg > 8 ? " is-hot" : chg < -8 ? " is-cool" : "");
-  check.textContent = "vs then";
-}
-
-function renderHero(c) {
-  const dateSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
-  $("heroFromCap").textContent = whenLabel(state.thenYear, state.thenMonth, dateSer);
-  const nowLabel = whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id));
-  const note = stickNote(c);
-  const measure = $("heroMeasure");
-  const unitStick = !!c.yd.unit;
-  const hourStick = c.yd.id === "wage_hourly";
-
-  if (unitStick) {
-    $("heroFrom").textContent = c.u0 == null ? "—" : fmtMeasure(c.u0) + " " + c.yd.unit;
-    $("heroTo").textContent = c.u1 == null ? "—" : fmtMeasure(c.u1) + " " + c.yd.unit;
-    const chg = c.u0 && c.u1 != null ? ((c.u1 - c.u0) / c.u0) * 100 : null;
-    $("heroBy").textContent = c.yd.name + " · " + nowLabel + (chg == null ? "" : " · " + pct(chg));
-    $("heroBy").className =
-      "hero-cap" + (chg > 8 ? " is-hot" : chg < -8 ? " is-cool" : "");
-    setChange(null);
-  } else if (hourStick) {
-    $("heroFrom").textContent = fmtMins(c.mins0);
-    $("heroTo").textContent = fmtMins(c.mins1);
-    const chg = c.mins0 && c.mins1 != null ? ((c.mins1 - c.mins0) / c.mins0) * 100 : null;
-    $("heroBy").textContent = "Hours · " + nowLabel + (chg == null ? "" : " · " + pct(chg));
-    $("heroBy").className =
-      "hero-cap" + (chg > 8 ? " is-hot" : chg < -8 ? " is-cool" : "");
-    setChange(null);
-  } else {
-    const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
-    const fromTxt = fmtPlain(c.from, c.it.dollars);
-    $("heroFrom").textContent = fromTxt === "—" ? "—" : fromTxt + unit;
-    $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
-    $("heroBy").textContent = c.yd.name + " · " + nowLabel;
-    $("heroBy").className = "hero-cap";
-    const check = $("heroCheck");
-    const side = $("heroActualSide");
-    const pair = $("heroPair");
-    if (c.actual != null && c.vs != null) {
-      side.hidden = false;
-      pair.classList.add("is-three");
-      $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars) + unit;
-      check.className =
-        "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
-      const actualYtd =
-        !state.nowMonth && yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
-      check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
-    } else {
-      side.hidden = true;
-      pair.classList.remove("is-three");
-      $("heroActual").textContent = "";
-      check.className = "hero-cap";
-      check.textContent = "";
-    }
-  }
-
-  if (note) {
-    measure.hidden = false;
-    measure.textContent = note;
-  } else if (unitStick || hourStick) {
-    measure.hidden = false;
-    measure.textContent = conversionLine(c);
-  } else {
-    measure.hidden = true;
   }
 
   const work = $("work");
-  if (!hourStick && c.it.dollars !== false && c.mins0 != null) {
+  if (c.it.dollars !== false && c.mins0 != null) {
     work.hidden = false;
     work.textContent =
       "Work time  " +
@@ -380,34 +342,20 @@ function renderHero(c) {
   }
 }
 
-function fanNow(y, c) {
-  const redefined =
-    y.id === "m1" &&
-    atMonth(seriesOf("m1"), state.thenYear, state.thenMonth) != null &&
-    atMonth(seriesOf("m1"), state.nowYear, state.nowMonth) != null &&
-    crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
-  if (redefined) return "redefined";
-  if (y.unit) {
-    const px = atMonth(seriesOf(y.id), state.nowYear, state.nowMonth);
-    if (c.numNow == null || !px) return "—";
-    return fmtMeasure(c.numNow / px) + " " + y.unit;
-  }
-  if (y.id === "wage_hourly" && c.it.dollars !== false) {
-    const wage = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
-    if (c.numNow == null || !wage) return "—";
-    return fmtMins((c.numNow / wage) * 60);
-  }
-  const r = scale(y.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
-  const v = c.from != null && r != null ? c.from * r : null;
-  return fmtPlain(v, c.it.dollars !== false);
-}
-
 function renderFan(c) {
   const el = $("fan");
+  const dollars = c.it.dollars !== false;
   el.innerHTML = YARDS.map((y) => {
-    const text = fanNow(y, c);
+    const r = scale(y.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+    const v = c.from != null && r != null ? c.from * r : null;
+    const redefined =
+      y.id === "m1" &&
+      v == null &&
+      atMonth(seriesOf("m1"), state.thenYear, state.thenMonth) != null &&
+      atMonth(seriesOf("m1"), state.nowYear, state.nowMonth) != null &&
+      crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
     const on = y.id === state.yard ? " is-on" : "";
-    const miss = text === "—" || text === "redefined" ? " is-miss" : "";
+    const miss = v == null ? " is-miss" : "";
     return (
       '<div class="fan-row' +
       on +
@@ -416,7 +364,7 @@ function renderFan(c) {
       '</span><span class="fan-v' +
       miss +
       '">' +
-      text +
+      (redefined ? "redefined" : fmtPlain(v, dollars)) +
       "</span></div>"
     );
   }).join("");
