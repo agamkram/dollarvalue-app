@@ -1,4 +1,4 @@
-const APP_VERSION = "v22";
+const APP_VERSION = "v23";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -328,9 +328,11 @@ function renderHero(c) {
     measure.hidden = true;
   }
 
+  const pair = $("heroPair");
   const side = $("heroActualSide");
   const check = $("heroCheck");
   if (c.actual != null && c.vs != null) {
+    pair.classList.add("is-three");
     side.classList.remove("is-empty");
     $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars);
     setHeroUnit("heroActualUnit", unit);
@@ -341,6 +343,7 @@ function renderHero(c) {
       yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
     check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
   } else {
+    pair.classList.remove("is-three");
     side.classList.add("is-empty");
     $("heroActual").textContent = "";
     setHeroUnit("heroActualUnit", "");
