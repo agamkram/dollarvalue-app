@@ -1,4 +1,4 @@
-const APP_VERSION = "v18";
+const APP_VERSION = "v19";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -347,19 +347,6 @@ function renderHero(c) {
     check.className = "hero-cap";
     check.textContent = "";
   }
-
-  const work = $("work");
-  if (c.it.dollars !== false && c.mins0 != null) {
-    work.hidden = false;
-    work.textContent =
-      "Work time  " +
-      fmtMins(c.mins0) +
-      " then  →  " +
-      fmtMins(c.mins1) +
-      " now";
-  } else {
-    work.hidden = true;
-  }
 }
 
 function renderHeat(c) {
@@ -386,6 +373,30 @@ function renderHeat(c) {
     );
   }
   el.innerHTML = bits.join("");
+  const cap = $("heatCap");
+  if (bits.length && c.ratio != null) {
+    cap.hidden = false;
+    cap.textContent =
+      "Versus " +
+      c.yd.name +
+      " — how far each real price sits from what that measure said it should be.";
+  } else {
+    cap.hidden = true;
+    cap.textContent = "";
+  }
+
+  const work = $("work");
+  if (c.it.dollars !== false && c.mins0 != null) {
+    work.hidden = false;
+    work.textContent =
+      "Work time — minutes of a production worker’s pay to buy it: " +
+      fmtMins(c.mins0) +
+      " then → " +
+      fmtMins(c.mins1) +
+      " now";
+  } else {
+    work.hidden = true;
+  }
 }
 
 function renderAll() {
