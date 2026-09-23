@@ -1,4 +1,4 @@
-const APP_VERSION = "v14";
+const APP_VERSION = "v15";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -272,16 +272,28 @@ function fmtMins(m) {
   return Math.round(m) + " min";
 }
 
+function setHeroUnit(id, unit) {
+  const el = $(id);
+  if (!unit) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = unit.replace(/^\//, "");
+}
+
 function renderHero(c) {
   const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
-  const fromTxt = fmtPlain(c.from, c.it.dollars);
-  $("heroFrom").textContent = fromTxt === "—" ? "—" : fromTxt + unit;
+  $("heroFrom").textContent = fmtPlain(c.from, c.it.dollars);
+  setHeroUnit("heroFromUnit", unit);
   $("heroFromCap").textContent = whenLabel(
     state.thenYear,
     state.thenMonth,
     c.it.typed ? null : seriesOf(c.it.series || c.it.id)
   );
   $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
+  setHeroUnit("heroToUnit", c.expected == null ? "" : unit);
   $("heroBy").textContent =
     c.yd.name +
     " · " +
@@ -319,7 +331,8 @@ function renderHero(c) {
   if (c.actual != null && c.vs != null) {
     side.hidden = false;
     pair.classList.add("is-three");
-    $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars) + unit;
+    $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars);
+    setHeroUnit("heroActualUnit", unit);
     check.className =
       "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
     const actualYtd =
@@ -330,6 +343,7 @@ function renderHero(c) {
     side.hidden = true;
     pair.classList.remove("is-three");
     $("heroActual").textContent = "";
+    setHeroUnit("heroActualUnit", "");
     check.className = "hero-cap";
     check.textContent = "";
   }
