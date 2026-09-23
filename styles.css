@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 17;
+  --dv-css: 18;
 }
 
 *,
@@ -254,14 +254,10 @@ html.pwa-standalone .fit-stage {
 .heat {
   flex-shrink: 0;
   display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 2px 0 4px;
-  scrollbar-width: none;
-}
-.heat::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 2px 0 2px;
+  overflow: hidden;
 }
 
 .chip {
@@ -269,16 +265,18 @@ html.pwa-standalone .fit-stage {
   border: 1px solid var(--line);
   background: var(--bg2);
   border-radius: 999px;
-  padding: 3px 8px 4px;
-  font-size: 0.6rem;
+  padding: 2px 6px 3px;
+  font-size: 0.55rem;
+  line-height: 1.2;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .chip b {
   font-weight: 600;
   color: var(--text);
-  padding-right: 4px;
+  padding-right: 3px;
 }
 
 .chip.is-hot {
