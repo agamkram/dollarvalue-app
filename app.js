@@ -1,4 +1,4 @@
-const APP_VERSION = "v16";
+const APP_VERSION = "v17";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -362,34 +362,6 @@ function renderHero(c) {
   }
 }
 
-function renderFan(c) {
-  const el = $("fan");
-  const dollars = c.it.dollars !== false;
-  el.innerHTML = YARDS.map((y) => {
-    const r = scale(y.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
-    const v = c.from != null && r != null ? c.from * r : null;
-    const redefined =
-      y.id === "m1" &&
-      v == null &&
-      atMonth(seriesOf("m1"), state.thenYear, state.thenMonth) != null &&
-      atMonth(seriesOf("m1"), state.nowYear, state.nowMonth) != null &&
-      crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
-    const on = y.id === state.yard ? " is-on" : "";
-    const miss = v == null ? " is-miss" : "";
-    return (
-      '<div class="fan-row' +
-      on +
-      '"><span class="fan-k">' +
-      y.name +
-      '</span><span class="fan-v' +
-      miss +
-      '">' +
-      (redefined ? "redefined" : fmtPlain(v, dollars)) +
-      "</span></div>"
-    );
-  }).join("");
-}
-
 function renderHeat(c) {
   const el = $("heat");
   const bits = [];
@@ -419,7 +391,6 @@ function renderHeat(c) {
 function renderAll() {
   const c = compute();
   renderHero(c);
-  renderFan(c);
   renderHeat(c);
   $("amountWrap").hidden = !itemMeta().typed;
   sizeDrums();

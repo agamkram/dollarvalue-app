@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 16;
+  --dv-css: 17;
 }
 
 *,
@@ -242,53 +242,6 @@ html.pwa-standalone .fit-stage {
   font-size: 0.72rem;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-}
-
-.fan {
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px 8px;
-  padding: 2px 2px 0;
-}
-
-@media (min-width: 700px) {
-  .fan {
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 2px 16px;
-  }
-}
-
-.fan-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 0.66rem;
-  padding: 2px 0;
-  border-bottom: 1px solid transparent;
-}
-
-.fan-row.is-on .fan-k {
-  color: var(--gold);
-}
-
-.fan-k {
-  color: var(--muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fan-v {
-  font-family: var(--mono);
-  font-size: 0.64rem;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.fan-v.is-miss {
-  color: var(--muted);
 }
 
 .work {
