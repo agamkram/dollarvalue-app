@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 24;
+  --dv-css: 25;
 }
 
 *,
@@ -198,12 +198,12 @@ html.pwa-standalone .fit-stage {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  padding: 4px 6px;
+  gap: 0;
+  padding: 1px 2px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
