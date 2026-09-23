@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v23";
+        var EXPECTED = "v24";
         window.__DV_EXPECTED = EXPECTED;
       } catch (e) {}
     })();
@@ -113,7 +113,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=23" />
+  <link rel="stylesheet" href="styles.css?v=24" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -121,28 +121,26 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v23</span>
+        <span class="ver" id="verBadge" title="Build">v24</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
 
     <section class="hero" id="hero" aria-live="polite">
-      <div class="hero-pair" id="heroPair">
-        <div class="hero-side">
-          <p class="hero-amt" id="heroFrom"></p>
-          <p class="hero-unit" id="heroFromUnit" hidden></p>
-          <p class="hero-cap" id="heroFromCap"></p>
-        </div>
-        <div class="hero-side">
-          <p class="hero-amt hero-amt-now" id="heroTo"></p>
-          <p class="hero-unit" id="heroToUnit" hidden></p>
-          <p class="hero-cap" id="heroBy"></p>
-        </div>
-        <div class="hero-side" id="heroActualSide">
-          <p class="hero-amt" id="heroActual"></p>
-          <p class="hero-unit" id="heroActualUnit" hidden></p>
-          <p class="hero-cap" id="heroCheck"></p>
-        </div>
+      <div class="hero-side" id="heroFromSide">
+        <p class="hero-amt" id="heroFrom"></p>
+        <p class="hero-unit" id="heroFromUnit" hidden></p>
+        <p class="hero-cap" id="heroFromCap"></p>
+      </div>
+      <div class="hero-side" id="heroToSide">
+        <p class="hero-amt hero-amt-now" id="heroTo"></p>
+        <p class="hero-unit" id="heroToUnit" hidden></p>
+        <p class="hero-cap" id="heroBy"></p>
+      </div>
+      <div class="hero-side" id="heroActualSide">
+        <p class="hero-amt" id="heroActual"></p>
+        <p class="hero-unit" id="heroActualUnit" hidden></p>
+        <p class="hero-cap" id="heroCheck"></p>
       </div>
     </section>
     <p class="hero-measure" id="heroMeasure" hidden></p>
@@ -195,7 +193,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=23" defer></script>
+  <script src="app.js?v=24" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>

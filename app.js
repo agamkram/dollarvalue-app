@@ -1,4 +1,4 @@
-const APP_VERSION = "v23";
+const APP_VERSION = "v24";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -283,22 +283,53 @@ function setHeroUnit(id, unit) {
   el.textContent = unit.replace(/^\//, "");
 }
 
+function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
+  const side = $(sideId);
+  const capEl = $(capId);
+  if (amt == null || amt === "") {
+    side.classList.add("is-empty");
+    $(amtId).textContent = "";
+    setHeroUnit(unitId, "");
+    capEl.className = "hero-cap";
+    capEl.textContent = "";
+    return;
+  }
+  side.classList.remove("is-empty");
+  $(amtId).textContent = amt;
+  setHeroUnit(unitId, unit || "");
+  capEl.className =
+    "hero-cap" + (hot === "hot" ? " is-hot" : hot === "cool" ? " is-cool" : "");
+  capEl.textContent = cap || "";
+}
+
 function renderHero(c) {
   const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
-  $("heroFrom").textContent = fmtPlain(c.from, c.it.dollars);
-  setHeroUnit("heroFromUnit", c.from == null ? "" : unit);
-  $("heroFromCap").textContent = whenLabel(
-    state.thenYear,
-    state.thenMonth,
-    c.it.typed ? null : seriesOf(c.it.series || c.it.id)
+
+  setHeroBay(
+    "heroFromSide",
+    "heroFrom",
+    "heroFromUnit",
+    "heroFromCap",
+    c.from == null ? null : fmtPlain(c.from, c.it.dollars),
+    unit,
+    whenLabel(
+      state.thenYear,
+      state.thenMonth,
+      c.it.typed ? null : seriesOf(c.it.series || c.it.id)
+    )
   );
 
-  $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
-  setHeroUnit("heroToUnit", c.expected == null ? "" : unit);
-  $("heroBy").textContent =
+  setHeroBay(
+    "heroToSide",
+    "heroTo",
+    "heroToUnit",
+    "heroBy",
+    c.expected == null ? null : fmtPlain(c.expected, c.it.dollars),
+    unit,
     c.yd.name +
-    " · " +
-    whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id));
+      " · " +
+      whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id))
+  );
 
   const yardSer = seriesOf(c.yd.id);
   const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
@@ -328,27 +359,22 @@ function renderHero(c) {
     measure.hidden = true;
   }
 
-  const pair = $("heroPair");
-  const side = $("heroActualSide");
-  const check = $("heroCheck");
   if (c.actual != null && c.vs != null) {
-    pair.classList.add("is-three");
-    side.classList.remove("is-empty");
-    $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars);
-    setHeroUnit("heroActualUnit", unit);
-    check.className =
-      "hero-cap" + (c.vs > 8 ? " is-hot" : c.vs < -8 ? " is-cool" : "");
     const actualYtd =
       !state.nowMonth &&
       yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
-    check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
+    setHeroBay(
+      "heroActualSide",
+      "heroActual",
+      "heroActualUnit",
+      "heroCheck",
+      fmtPlain(c.actual, c.it.dollars),
+      unit,
+      (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs),
+      c.vs > 8 ? "hot" : c.vs < -8 ? "cool" : ""
+    );
   } else {
-    pair.classList.remove("is-three");
-    side.classList.add("is-empty");
-    $("heroActual").textContent = "";
-    setHeroUnit("heroActualUnit", "");
-    check.className = "hero-cap";
-    check.textContent = "";
+    setHeroBay("heroActualSide", "heroActual", "heroActualUnit", "heroCheck", null);
   }
 }
 
