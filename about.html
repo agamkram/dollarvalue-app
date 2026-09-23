@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="DollarValue" />
   <title>About DollarValue | Mark Maga</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link
@@ -25,36 +25,45 @@
     <h1>DollarValue</h1>
     <p>
       The BLS inflation calculator answers one question with one series. This app
-      keeps that question — an amount in one year versus another — and lets you
-      swap the yardstick.
+      keeps the dates and the amount, and lets you choose what the amount is
+      measured in.
     </p>
     <p>
-      CPI-U is the default because that is the public language. PCE, chained CPI,
-      the GDP deflator, wages, GDP per capita, GDP share, gold, and the monetary
-      aggregates are sitting on the same wheel. They are not the same question.
-      A price index scales a grocery basket. Gold, silver, and Bitcoin also
-      count the amount in ounces or BTC, then and now. M2 asks how much
-      currency was created.
+      Item is the thing you are asking about. In terms of is how you measure it.
+      The two lists match, except In terms of starts with the official price
+      measures — CPI-U, PCE, chained CPI, and the GDP deflator — because those
+      define the dollar and are not themselves a sticker price. Under them sit
+      the same real series as Item: groceries, oil, wheat, corn, gold, silver,
+      bitcoin, wages, income, GDP, money, homes, and the stock indexes.
     </p>
     <p>
-      Sticker prices (milk, gas, and the rest) also show expected versus
-      actual, and how many minutes of production-worker pay that price took.
-      Rent, home prices, college, medical care, used cars, and the stock
-      indexes are index levels, not dollars, so they have no work-time line.
+      One main answer. The thing’s dollars then, scaled by whatever you picked
+      In terms of. CPI answers “did this beat official inflation?” Gold answers
+      “did this beat gold’s dollar price?” Same math; one measure at a time.
+      Gold, silver, and Bitcoin also show how many ounces or coins that dollar
+      amount bought then and now. The smaller list is the other measures if you
+      had picked them instead.
+    </p>
+    <p>
+      Sticker prices also show expected versus actual, and how many minutes of
+      production-worker pay that price took. Index levels (rent, Case-Shiller,
+      college, medical, used cars, NASDAQ, S&amp;P, Dow) and money aggregates
+      are not sticker dollars, so they have no work-time line. Median home
+      sales price and household income are dollars.
     </p>
     <p>
       US only. CPI from 1800 is Minneapolis Fed scaled onto BLS from 1913. Gold
       is the official US parity until 1973, then COMEX (a gap in the 1974–1999
       market series is left empty, not invented). A month with no print is a
-      dash. Share of GDP is annual. The deflator, GDP per capita, and FHFA home
-      prices are quarterly. The latest year is marked
-      YTD while its last month is still missing. M1 across May 2020 is left
-      blank; the Fed changed the definition that month. Missing years show as
-      a dash.
+      dash. GDP is annual. The deflator, GDP per capita, and FHFA home prices
+      are quarterly. The latest year is marked YTD while its last month is still
+      missing. M1 across May 2020 is left blank; the Fed changed the definition
+      that month. Short series (bitcoin, silver, the S&amp;P, the Dow, the broad
+      dollar) only fill years they actually cover. Missing years show as a dash.
     </p>
     <p>
-      Data: BLS, BEA, FRED, FHFA, Minneapolis Fed. Gasoline on the wheel is
-      the BLS average price. Not ShadowStats, not Chapwood.
+      Data: BLS, BEA, FRED, FHFA, Census, IMF, Minneapolis Fed. Gasoline on the
+      wheel is the BLS average price. Not ShadowStats, not Chapwood.
     </p>
     <p><a href="https://markmaga.com">markmaga.com</a></p>
   </article>

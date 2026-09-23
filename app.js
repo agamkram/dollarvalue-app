@@ -1,4 +1,4 @@
-const APP_VERSION = "v13";
+const APP_VERSION = "v14";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -16,44 +16,52 @@ const MONTHS = [
   { id: 12, label: "Dec" },
 ];
 
-const YARDS = [
+const DEFLATORS = [
   { id: "cpi", name: "CPI-U", hint: "Official urban basket" },
   { id: "pce", name: "PCE", hint: "Fed’s preferred" },
   { id: "chained_cpi", name: "Chained CPI", hint: "Substitution built in" },
   { id: "gdp_deflator", name: "GDP deflator", hint: "All output, not just households" },
-  { id: "wage_hourly", name: "Hourly wage", hint: "Production worker pay" },
-  { id: "gdp_per_capita", name: "GDP per capita", hint: "Average output per person" },
-  { id: "gdp", name: "Share of GDP", hint: "How big vs the whole economy" },
-  { id: "gold", name: "Gold", hint: "Official par, then COMEX", unit: "oz" },
-  { id: "silver_spot", name: "Silver", hint: "Spot ounce", unit: "oz" },
-  { id: "m2", name: "M2", hint: "Broad money" },
-  { id: "m1", name: "M1", hint: "Narrow money" },
-  { id: "base", name: "Monetary base", hint: "Fed’s balance-sheet dollars" },
-  { id: "dxy", name: "Broad dollar", hint: "Dollar vs other currencies" },
-  { id: "bitcoin", name: "Bitcoin", hint: "Priced in BTC", unit: "BTC" },
 ];
 
-const ITEMS = [
-  { id: "custom", name: "Custom $", typed: true, kind: "commodity" },
+/** Shared on Item and In terms of. Deflators sit only on In terms of. */
+const THINGS = [
   { id: "milk", name: "Milk", unit: "/gal", series: "milk", kind: "commodity" },
   { id: "eggs", name: "Eggs", unit: "/doz", series: "eggs", kind: "commodity" },
   { id: "coffee", name: "Coffee", unit: "/lb", series: "coffee", kind: "commodity" },
   { id: "gasoline", name: "Gasoline", unit: "/gal", series: "gasoline", kind: "commodity" },
   { id: "electricity", name: "Electricity", unit: "/kWh", series: "electricity", kind: "commodity" },
   { id: "wti", name: "WTI oil", unit: "/bbl", series: "wti", kind: "commodity" },
-  { id: "gold", name: "Gold", unit: "/oz", series: "gold", kind: "commodity" },
-  { id: "silver_spot", name: "Silver", unit: "/oz", series: "silver_spot", kind: "commodity" },
-  { id: "bitcoin", name: "Bitcoin", series: "bitcoin", kind: "asset" },
+  { id: "wheat", name: "Wheat", unit: "/mt", series: "wheat", kind: "commodity" },
+  { id: "corn", name: "Corn", unit: "/mt", series: "corn", kind: "commodity" },
+  { id: "gold", name: "Gold", unit: "/oz", series: "gold", kind: "commodity", stick: "oz" },
+  { id: "silver_spot", name: "Silver", unit: "/oz", series: "silver_spot", kind: "commodity", stick: "oz" },
+  { id: "bitcoin", name: "Bitcoin", series: "bitcoin", kind: "asset", stick: "BTC" },
   { id: "wage_hourly", name: "Hourly wage", series: "wage_hourly", kind: "income" },
-  { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false },
+  { id: "income_hh", name: "Household income", series: "income_hh", kind: "income" },
+  { id: "gdp_per_capita", name: "GDP per capita", series: "gdp_per_capita", kind: "income", dollars: false },
+  { id: "gdp", name: "GDP", series: "gdp", kind: "output", dollars: false },
+  { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false },
+  { id: "m1", name: "M1", series: "m1", kind: "money", dollars: false },
+  { id: "base", name: "Monetary base", series: "base", kind: "money", dollars: false },
+  { id: "dxy", name: "Broad dollar", series: "dxy", kind: "numeraire", dollars: false },
+  { id: "homes_msp", name: "Median home", series: "homes_msp", kind: "asset" },
   { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "index", dollars: false },
   { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "index", dollars: false },
+  { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false },
   { id: "college", name: "College index", series: "college", kind: "index", dollars: false },
   { id: "medical", name: "Medical index", series: "medical", kind: "index", dollars: false },
   { id: "used_cars", name: "Used car index", series: "used_cars", kind: "index", dollars: false },
   { id: "nasdaq", name: "NASDAQ", series: "nasdaq", kind: "index", dollars: false },
   { id: "stocks", name: "S&P 500", series: "stocks", kind: "index", dollars: false },
+  { id: "djia", name: "Dow Jones", series: "djia", kind: "index", dollars: false },
 ];
+
+const ITEMS = [
+  { id: "custom", name: "Custom $", typed: true, kind: "commodity" },
+  ...THINGS,
+];
+
+const YARDS = [...DEFLATORS, ...THINGS];
 
 const state = {
   thenYear: 2000,
@@ -227,7 +235,7 @@ function compute() {
     : null;
   let u0 = null;
   let u1 = null;
-  if (yd.unit) {
+  if (yd.stick) {
     const px0 = atMonth(seriesOf(yd.id), state.thenYear, state.thenMonth);
     const px1 = atMonth(seriesOf(yd.id), state.nowYear, state.nowMonth);
     const nowDollars = it.typed ? from : actual;
@@ -291,16 +299,16 @@ function renderHero(c) {
   if (note) {
     measure.hidden = false;
     measure.textContent = note;
-  } else if (c.yd.unit) {
+  } else if (c.yd.stick) {
     measure.hidden = false;
     measure.textContent =
       fmtMeasure(c.u0) +
       " " +
-      c.yd.unit +
+      c.yd.stick +
       " then  →  " +
       fmtMeasure(c.u1) +
       " " +
-      c.yd.unit +
+      c.yd.stick +
       " now";
   } else {
     measure.hidden = true;
