@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v21";
+        var EXPECTED = "v22";
         window.__DV_EXPECTED = EXPECTED;
       } catch (e) {}
     })();
@@ -113,7 +113,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -121,7 +121,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v21</span>
+        <span class="ver" id="verBadge" title="Build">v22</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -138,14 +138,14 @@
           <p class="hero-unit" id="heroToUnit" hidden></p>
           <p class="hero-cap" id="heroBy"></p>
         </div>
-        <div class="hero-side" id="heroActualSide" hidden>
+        <div class="hero-side" id="heroActualSide">
           <p class="hero-amt" id="heroActual"></p>
           <p class="hero-unit" id="heroActualUnit" hidden></p>
           <p class="hero-cap" id="heroCheck"></p>
         </div>
       </div>
-      <p class="hero-measure" id="heroMeasure" hidden></p>
     </section>
+    <p class="hero-measure" id="heroMeasure" hidden></p>
 
     <section class="scan" aria-label="Other items versus this measure">
       <p class="scan-cap" id="heatCap"></p>
@@ -195,7 +195,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=21" defer></script>
+  <script src="app.js?v=22" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>

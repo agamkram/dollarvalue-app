@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 20;
+  --dv-css: 22;
 }
 
 *,
@@ -184,43 +184,46 @@ html.pwa-standalone .fit-stage {
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 4px 8px 3px;
+  padding: 0 8px;
   text-align: left;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.hero-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.hero-side {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.hero-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  align-items: start;
-  min-height: 0;
-}
-
-.hero-pair.is-three {
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
-}
-
-.hero-side {
-  min-width: 0;
+.hero-side.is-empty .hero-amt,
+.hero-side.is-empty .hero-unit,
+.hero-side.is-empty .hero-cap {
+  visibility: hidden;
 }
 
 .hero-amt {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(1rem, 4.8vw, 1.55rem);
+  font-size: clamp(0.95rem, 4.2vw, 1.35rem);
   letter-spacing: 0.02em;
-  line-height: 1.1;
+  line-height: 1.08;
   color: var(--text);
   white-space: nowrap;
-}
-
-.hero-pair.is-three .hero-amt {
-  font-size: clamp(0.92rem, 4vw, 1.35rem);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-amt-now {
@@ -230,21 +233,31 @@ html.pwa-standalone .fit-stage {
 .hero-unit {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   line-height: 1.1;
   color: var(--muted);
   letter-spacing: 0.02em;
+  min-height: 0.58rem;
 }
 
 .hero-unit[hidden] {
-  display: none !important;
+  visibility: hidden;
+  display: block !important;
+  height: 0.58rem;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .hero-cap {
   margin: 1px 0 0;
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   line-height: 1.15;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-cap.is-hot {
@@ -255,15 +268,21 @@ html.pwa-standalone .fit-stage {
 }
 
 .hero-measure {
-  margin: 2px 0 0;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 2px;
   font-family: var(--mono);
   font-size: 0.58rem;
-  line-height: 1.15;
-  color: var(--text);
+  line-height: 1.2;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.hero-measure[hidden] {
+  display: none !important;
 }
 
 .scan {

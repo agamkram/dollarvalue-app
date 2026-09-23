@@ -1,4 +1,4 @@
-const APP_VERSION = "v21";
+const APP_VERSION = "v22";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -286,18 +286,20 @@ function setHeroUnit(id, unit) {
 function renderHero(c) {
   const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
   $("heroFrom").textContent = fmtPlain(c.from, c.it.dollars);
-  setHeroUnit("heroFromUnit", unit);
+  setHeroUnit("heroFromUnit", c.from == null ? "" : unit);
   $("heroFromCap").textContent = whenLabel(
     state.thenYear,
     state.thenMonth,
     c.it.typed ? null : seriesOf(c.it.series || c.it.id)
   );
+
   $("heroTo").textContent = fmtPlain(c.expected, c.it.dollars);
   setHeroUnit("heroToUnit", c.expected == null ? "" : unit);
   $("heroBy").textContent =
     c.yd.name +
     " · " +
     whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id));
+
   const yardSer = seriesOf(c.yd.id);
   const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
   const m1Note =
@@ -325,12 +327,11 @@ function renderHero(c) {
   } else {
     measure.hidden = true;
   }
-  const check = $("heroCheck");
+
   const side = $("heroActualSide");
-  const pair = $("heroPair");
+  const check = $("heroCheck");
   if (c.actual != null && c.vs != null) {
-    side.hidden = false;
-    pair.classList.add("is-three");
+    side.classList.remove("is-empty");
     $("heroActual").textContent = fmtPlain(c.actual, c.it.dollars);
     setHeroUnit("heroActualUnit", unit);
     check.className =
@@ -340,8 +341,7 @@ function renderHero(c) {
       yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
     check.textContent = (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs);
   } else {
-    side.hidden = true;
-    pair.classList.remove("is-three");
+    side.classList.add("is-empty");
     $("heroActual").textContent = "";
     setHeroUnit("heroActualUnit", "");
     check.className = "hero-cap";
