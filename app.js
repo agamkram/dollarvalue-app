@@ -1,4 +1,4 @@
-const APP_VERSION = "v15";
+const APP_VERSION = "v16";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -442,8 +442,6 @@ function mountDrum(el, options, selectedId, onChange) {
   el.innerHTML = "";
   el.appendChild(ul);
 
-  const rh = () => el.querySelector("li")?.getBoundingClientRect().height || 21;
-
   function highlight(id) {
     ul.querySelectorAll("li").forEach((li) => {
       li.classList.toggle("is-on", li.dataset.id === String(id));
@@ -457,9 +455,27 @@ function mountDrum(el, options, selectedId, onChange) {
   function scrollToId(id, smooth) {
     const i = indexOf(id);
     if (i < 0) return;
-    const top = i * rh();
-    el.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    const li = ul.children[i];
+    if (!li) return;
+    const top = li.offsetTop - (el.clientHeight / 2 - li.offsetHeight / 2);
+    el.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
     highlight(id);
+  }
+
+  function indexFromScroll() {
+    const mid = el.scrollTop + el.clientHeight / 2;
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < ul.children.length; i++) {
+      const li = ul.children[i];
+      const c = li.offsetTop + li.offsetHeight / 2;
+      const d = Math.abs(c - mid);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+    return best;
   }
 
   let lock = false;
@@ -470,7 +486,8 @@ function mountDrum(el, options, selectedId, onChange) {
       if (lock) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const i = Math.round(el.scrollTop / rh());
+        if (lock) return;
+        const i = indexFromScroll();
         const opt = options[Math.max(0, Math.min(options.length - 1, i))];
         if (!opt) return;
         highlight(opt.id);
@@ -478,22 +495,27 @@ function mountDrum(el, options, selectedId, onChange) {
           selectedId = opt.id;
           onChange(opt.id);
         }
-      }, 80);
+      }, 120);
     },
     { passive: true }
   );
 
-  requestAnimationFrame(() => {
+  function snapNow() {
     lock = true;
     scrollToId(selectedId, false);
     requestAnimationFrame(() => {
-      lock = false;
+      scrollToId(selectedId, false);
+      requestAnimationFrame(() => {
+        lock = false;
+      });
     });
-  });
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => scrollToId(selectedId, false));
   }
-  window.addEventListener("resize", () => scrollToId(selectedId, false));
+
+  requestAnimationFrame(snapNow);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(snapNow);
+  }
+  window.addEventListener("resize", snapNow);
 
   return {
     set(id) {
@@ -502,14 +524,10 @@ function mountDrum(el, options, selectedId, onChange) {
       scrollToId(id, true);
       setTimeout(() => {
         lock = false;
-      }, 280);
+      }, 320);
     },
     resnap() {
-      lock = true;
-      scrollToId(selectedId, false);
-      requestAnimationFrame(() => {
-        lock = false;
-      });
+      snapNow();
     },
   };
 }
@@ -595,6 +613,14 @@ function boot(data) {
   lastDrumH = 0;
   pinShellViewport();
   renderAll();
+  // Safari often lays out the long year lists after the first paint.
+  [50, 200, 500, 1000].forEach((ms) => {
+    setTimeout(() => {
+      lastDrumH = 0;
+      sizeDrums();
+      drums.forEach((d) => d.resnap());
+    }, ms);
+  });
 }
 
 function localHost() {
