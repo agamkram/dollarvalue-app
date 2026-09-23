@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 25;
+  --dv-css: 26;
 }
 
 *,
@@ -181,8 +181,7 @@ html.pwa-standalone .fit-stage {
   flex-shrink: 0;
   height: 70px;
   box-sizing: border-box;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  display: flex;
   gap: 3px;
   min-height: 0;
   padding: 0;
@@ -191,6 +190,7 @@ html.pwa-standalone .fit-stage {
 }
 
 .hero-side {
+  flex: 1 1 0;
   min-width: 0;
   height: 100%;
   box-sizing: border-box;
@@ -199,7 +199,7 @@ html.pwa-standalone .fit-stage {
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 1px 2px;
+  padding: 0 1px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -207,18 +207,16 @@ html.pwa-standalone .fit-stage {
   overflow: hidden;
 }
 
-.hero-side.is-empty .hero-amt,
-.hero-side.is-empty .hero-unit,
-.hero-side.is-empty .hero-cap {
-  display: none !important;
+.hero-side.is-empty {
+  display: none;
 }
 
 .hero-amt {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(1.15rem, 5.5vw, 1.65rem);
-  letter-spacing: 0.01em;
-  line-height: 1;
+  font-size: clamp(1.75rem, 9vw, 2.55rem);
+  letter-spacing: -0.02em;
+  line-height: 0.95;
   color: var(--text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -234,8 +232,8 @@ html.pwa-standalone .fit-stage {
 .hero-unit {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.55rem;
-  line-height: 1.1;
+  font-size: 0.5rem;
+  line-height: 1;
   color: var(--muted);
   letter-spacing: 0.02em;
   max-width: 100%;
@@ -249,8 +247,8 @@ html.pwa-standalone .fit-stage {
 
 .hero-cap {
   margin: 0;
-  font-size: 0.55rem;
-  line-height: 1.15;
+  font-size: 0.5rem;
+  line-height: 1;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;

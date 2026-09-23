@@ -1,4 +1,4 @@
-const APP_VERSION = "v25";
+const APP_VERSION = "v26";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -515,11 +515,11 @@ function mountDrum(el, options, selectedId, onChange) {
     lock = true;
     scrollToId(selectedId, false);
     requestAnimationFrame(() => {
-      scrollToId(selectedId, false);
-      requestAnimationFrame(() => {
-        lock = false;
-      });
+    scrollToId(selectedId, false);
+    requestAnimationFrame(() => {
+      lock = false;
     });
+  });
   }
 
   requestAnimationFrame(snapNow);
