@@ -1,4 +1,4 @@
-const APP_VERSION = "v37";
+const APP_VERSION = "v38";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -198,6 +198,14 @@ function yearKind(ser, year) {
   return "partial";
 }
 
+function quarterName(month) {
+  if (month === 1) return "Q1";
+  if (month === 4) return "Q2";
+  if (month === 7) return "Q3";
+  if (month === 10) return "Q4";
+  return "";
+}
+
 function whenLabel(year, month, ser) {
   if (!month) {
     const kind = yearKind(ser, year);
@@ -205,6 +213,10 @@ function whenLabel(year, month, ser) {
     if (kind === "partial") return year + " partial";
     if (kind === "avg") return year + " avg";
     return String(year);
+  }
+  if (ser && ser.freq === "quarterly") {
+    const q = quarterName(month);
+    if (q) return q + " " + year;
   }
   return MONTHS[month].label + " " + year;
 }
@@ -222,7 +234,11 @@ function holeNote(ser, year, month, label) {
   if (!month || atMonth(ser, year, month) != null) return "";
   const row = ser.monthly && ser.monthly[String(year)];
   if (!row || !row.some((v) => v != null)) return name + " is annual";
-  if (ser.freq === "quarterly") return name + " is quarterly";
+  if (ser.freq === "quarterly") {
+    const q = quarterName(month);
+    if (q) return name + " has no " + q + " print";
+    return name + " is quarterly";
+  }
   return name + " has no " + MONTHS[month].label + " print";
 }
 
