@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 39;
+  --dv-css: 42;
 }
 
 *,
@@ -273,6 +273,17 @@ html.pwa-standalone .fit-stage {
 
 .hero-measure[hidden] {
   display: none !important;
+}
+
+.plain {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 2px;
+  max-height: 6.8em;
+  overflow: hidden;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text);
 }
 
 .scan {

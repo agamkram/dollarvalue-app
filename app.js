@@ -1,4 +1,4 @@
-const APP_VERSION = "v39";
+const APP_VERSION = "v42";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -512,7 +512,116 @@ function renderHero(c) {
     setHeroBay("heroActualSide", "heroActual", "heroActualUnit", "heroCheck", null);
   }
 
+  $("plain").textContent = plainLine(c, note);
   requestAnimationFrame(fitHeroAmts);
+}
+
+function yardRole(yd) {
+  if (yd.id === "cpi") return "basket";
+  if (yd.id === "pce" || yd.id === "chained_cpi" || yd.id === "gdp_deflator") return "prices";
+  if (yd.id === "spend_hh") return "spending";
+  if (yd.id === "income_hh") return "hhincome";
+  if (yd.id === "gdp_per_capita") return "avginc";
+  if (yd.id === "gdp") return "economy";
+  if (yd.id === "wage_hourly") return "wage";
+  if (yd.id === "dxy") return "dollar";
+  if (yd.id === "m1" || yd.id === "m2" || yd.id === "base") return "money";
+  if (yd.stick) return "stick";
+  if (yd.id === "homes_msp") return "home";
+  if (yd.dollars === false) return "index";
+  return "goods";
+}
+
+function lagWords(vs) {
+  const p = pace(vs);
+  if (!p || (vs >= -0.5 && vs <= 0.5)) return "";
+  const n = p.text.replace(/^[+-]/, "").replace("/yr", " a year");
+  return vs > 0 ? " That is " + n + " faster." : " That is " + n + " slower.";
+}
+
+function plainWhen(year, month, ser) {
+  return whenLabel(year, month, ser)
+    .replace(/ avg$/, "")
+    .replace(/ YTD$/, ", so far")
+    .replace(/ partial$/, ", a partial year");
+}
+
+function plainLine(c, note) {
+  const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
+  const yardSer = seriesOf(c.yd.id);
+  const thenSer = c.it.typed ? yardSer : itemSer;
+  const thenL = plainWhen(state.thenYear, state.thenMonth, thenSer);
+  const nowL = plainWhen(state.nowYear, state.nowMonth, thenSer);
+  if (c.expected == null) return note || "No comparison for these dates.";
+  const exp = fmtPlain(c.expected, c.it.typed ? true : c.it.dollars);
+  const y = c.yd.name;
+  if (c.it.typed) {
+    const amt = fmtPlain(c.from, true);
+    if (c.yd.id === "cpi") {
+      return amt + " in " + thenL + " buys what " + exp + " buys in " + nowL + ", on the household basket.";
+    }
+    if (yardRole(c.yd) === "prices") {
+      return amt + " in " + thenL + " has the buying power of " + exp + " in " + nowL + ", using " + y + ".";
+    }
+    if (c.yd.id === "spend_hh") {
+      return amt + " in " + thenL + " is the same share of a household’s spending as " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.id === "income_hh") {
+      return amt + " in " + thenL + " is the same share of a typical household’s income as " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.id === "gdp_per_capita") {
+      return amt + " in " + thenL + " is the same share of average income as " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.id === "gdp") {
+      return amt + " in " + thenL + " is the same share of the whole economy as " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.id === "wage_hourly") {
+      return amt + " in " + thenL + " paid for a certain amount of work. That work pays " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.stick) {
+      return amt + " in " + thenL + " bought a certain amount of " + y.toLowerCase() + ". The same amount costs " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.id === "dxy") {
+      return amt + " in " + thenL + " is " + exp + " in " + nowL + " if it moved with the broad dollar. A stronger dollar makes this larger.";
+    }
+    if (yardRole(c.yd) === "money") {
+      return amt + " in " + thenL + " is " + exp + " in " + nowL + " if it grew with " + y + ".";
+    }
+    if (c.yd.id === "homes_msp") {
+      return amt + " in " + thenL + " was a slice of the median home price. That slice is " + exp + " in " + nowL + ".";
+    }
+    if (c.yd.dollars === false) {
+      return amt + " in " + thenL + " would be " + exp + " in " + nowL + " if it had grown with " + y + ".";
+    }
+    return amt + " in " + thenL + " bought a certain amount of " + y.toLowerCase() + ". The same amount costs " + exp + " in " + nowL + ".";
+  }
+  if (c.actual == null) return note || c.it.name + " has no reading for " + nowL + ".";
+  const from = fmtPlain(c.from, c.it.dollars);
+  const actual = fmtPlain(c.actual, c.it.dollars);
+  const name = c.it.name;
+  if (c.it.id === c.yd.id) {
+    return name + " is the measure, so " + from + " in " + thenL + " becomes " + actual + " in " + nowL + ".";
+  }
+  if (c.it.id === "spend_hh" && (c.yd.id === "cpi" || yardRole(c.yd) === "prices")) {
+    const extra = c.vs > 0.5 ? " The extra is stuff they bought." : c.vs < -0.5 ? " They bought less than prices alone suggest." : " Spending kept pace with prices.";
+    return "Households spent " + from + " in " + thenL + ". Prices alone would make that " + exp + " in " + nowL + ". They spend " + actual + "." + extra + lagWords(c.vs);
+  }
+  const rose = c.actual > c.from;
+  const fell = c.actual < c.from;
+  const yardRose = c.ratio > 1;
+  if (rose && c.vs < -0.5 && yardRose) {
+    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " rose faster. Keeping up would have meant " + exp + "." + lagWords(c.vs);
+  }
+  if (rose && c.vs > 0.5) {
+    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". It beat " + y + ". Just following " + y + " would have meant " + exp + "." + lagWords(c.vs);
+  }
+  if (fell && c.vs < -0.5) {
+    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " did better. Following it would have meant " + exp + "." + lagWords(c.vs);
+  }
+  if (fell && c.vs > 0.5) {
+    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " fell further. Following it would have meant " + exp + "." + lagWords(c.vs);
+  }
+  return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + ", which pointed to " + exp + ".";
 }
 
 function renderHeat(c) {
