@@ -47,6 +47,7 @@ FRED_SERIES = [
     ("corn", "PMAIZMTUSDM", "Corn", "commodity", "IMF via FRED"),
     ("wage_hourly", "AHETPI", "Production hourly wage", "income", "BLS via FRED"),
     ("income_hh", "MEHOINUSA646N", "Median household income", "income", "Census via FRED"),
+    ("spend_hh", "CXUTOTALEXPLB0101M", "Household spending", "expenditure", "BLS Consumer Expenditure Survey via FRED"),
     ("stocks", "SP500", "S&P 500", "asset", "FRED"),
     ("bitcoin", "CBBTCUSD", "Bitcoin", "numeraire", "Coinbase via FRED"),
     ("milk", "APU0000709112", "Milk", "commodity", "BLS Average Price"),

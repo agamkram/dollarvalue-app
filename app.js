@@ -1,4 +1,4 @@
-const APP_VERSION = "v38";
+const APP_VERSION = "v39";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -38,6 +38,7 @@ const THINGS = [
   { id: "bitcoin", name: "Bitcoin", series: "bitcoin", kind: "asset", stick: "BTC" },
   { id: "wage_hourly", name: "Hourly wage", series: "wage_hourly", kind: "income" },
   { id: "income_hh", name: "Household income", series: "income_hh", kind: "income" },
+  { id: "spend_hh", name: "Household spending", series: "spend_hh", kind: "expenditure" },
   { id: "gdp_per_capita", name: "GDP per capita", series: "gdp_per_capita", kind: "income" },
   { id: "gdp", name: "GDP", series: "gdp", kind: "output", dollars: false, unit: "billion" },
   { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false, unit: "billion" },
