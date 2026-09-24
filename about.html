@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="DollarValue" />
   <title>About DollarValue | Mark Maga</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=36" />
+  <link rel="stylesheet" href="styles.css?v=37" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link
@@ -24,47 +24,50 @@
     <p><a href="./">← DollarValue</a></p>
     <h1>DollarValue</h1>
     <p>
-      The BLS inflation calculator answers one question with one series. This app
-      keeps the dates and the amount, and lets you choose what the amount is
-      measured in.
+      Item is the thing. In terms of is the measure. The lists match, except In
+      terms of starts with CPI-U, PCE, chained CPI, and the GDP deflator.
     </p>
     <p>
-      Item is the thing you are asking about. In terms of is how you measure it.
-      The two lists match, except In terms of starts with the official price
-      measures — CPI-U, PCE, chained CPI, and the GDP deflator — because those
-      define the dollar and are not themselves a sticker price. Under them sit
-      the same real series as Item: groceries, oil, wheat, corn, gold, silver,
-      bitcoin, wages, income, GDP, money, homes, and the stock indexes.
+      The answer is the level then, scaled by the measure. A year with no print
+      shows a dash and says when the series starts or ends. A month with no
+      print is a dash. October 2025 CPI was never published.
     </p>
     <p>
-      One main answer. The thing’s dollars then, scaled by whatever you picked
-      In terms of. CPI answers “did this beat official inflation?” Gold answers
-      “did this beat gold’s dollar price?” Same math; one measure at a time.
-      Gold, silver, and Bitcoin also show how many ounces or coins that dollar
-      amount bought then and now. The colored pills show other items under that
-      same measure — what ran hot or cold versus what the measure said should
-      have happened.
+      Year means the average of that year’s prints. An open year is marked YTD.
+      A year missing months is marked partial. On a daily series the month is
+      the last print, and the year is the average of every print.
     </p>
     <p>
-      Sticker prices also show expected versus actual, and how many minutes of
-      production-worker pay that price took. Index levels (rent, Case-Shiller,
-      college, medical, used cars, NASDAQ, S&amp;P, Dow) and money aggregates
-      are not sticker dollars, so they have no work-time line. Median home
-      sales price and household income are dollars.
+      Gold is the US official price through 1973, then the World Bank monthly
+      average (London afternoon fixing, and from June 2025 their spot average).
+      Silver is that same monthly average. Bitcoin is Bitstamp from 2011 through
+      November 2014, then Coinbase. The S&amp;P is Shiller’s monthly composite
+      until September 2016, then the S&amp;P 500. The Dow is only the ten years
+      FRED may carry. Neither index includes dividends.
     </p>
     <p>
-      US only. CPI from 1800 is Minneapolis Fed scaled onto BLS from 1913. Gold
-      is the official US parity until 1973, then COMEX (a gap in the 1974–1999
-      market series is left empty, not invented). A month with no print is a
-      dash. GDP is annual. The deflator, GDP per capita, and FHFA home prices
-      are quarterly. The latest year is marked YTD while its last month is still
-      missing. M1 across May 2020 is left blank; the Fed changed the definition
-      that month. Short series (bitcoin, silver, the S&amp;P, the Dow, the broad
-      dollar) only fill years they actually cover. Missing years show as a dash.
+      The broad dollar is the Fed’s goods-only index before 2006, scaled onto
+      the goods-and-services index. It rises when the dollar strengthens. M1 is
+      blank across the May 2020 redefinition, as the item or as the measure.
     </p>
     <p>
-      Data: BLS, BEA, FRED, FHFA, Census, IMF, Minneapolis Fed. Gasoline on the
-      wheel is the BLS average price. Not ShadowStats, not Chapwood.
+      GDP, M1, M2, and the monetary base are billions of dollars. GDP per capita
+      and household income are current dollars. Household income is nominal, so
+      earlier years will not match Census’s inflation-adjusted chart. The median
+      home price is quarterly, along with the deflator, GDP per capita, and
+      FHFA. GDP is annual. PCE, the deflator, and GDP per capita are seasonally
+      adjusted. CPI-U is not. Chained CPI is revised after it is published.
+    </p>
+    <p>
+      Work time uses the production-worker wage, which starts in 1964. Ounces
+      and coins are shown only for a dollar price. Pills are the pace versus the
+      measure: per year when the span is a year or longer, colored past 2% a
+      year. Over a shorter span they are the total change, colored past 8%.
+    </p>
+    <p>
+      US only. CPI from 1800 is the Minneapolis Fed scaled onto BLS from 1913.
+      Data: BLS, BEA, FRED, FHFA, Census, IMF, World Bank, Minneapolis Fed,
+      Shiller, Bitstamp. Gasoline is the BLS average price.
     </p>
     <p><a href="https://markmaga.com">markmaga.com</a></p>
   </article>

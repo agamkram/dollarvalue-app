@@ -1,4 +1,4 @@
-const APP_VERSION = "v36";
+const APP_VERSION = "v37";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -38,11 +38,11 @@ const THINGS = [
   { id: "bitcoin", name: "Bitcoin", series: "bitcoin", kind: "asset", stick: "BTC" },
   { id: "wage_hourly", name: "Hourly wage", series: "wage_hourly", kind: "income" },
   { id: "income_hh", name: "Household income", series: "income_hh", kind: "income" },
-  { id: "gdp_per_capita", name: "GDP per capita", series: "gdp_per_capita", kind: "income", dollars: false },
-  { id: "gdp", name: "GDP", series: "gdp", kind: "output", dollars: false },
-  { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false },
-  { id: "m1", name: "M1", series: "m1", kind: "money", dollars: false },
-  { id: "base", name: "Monetary base", series: "base", kind: "money", dollars: false },
+  { id: "gdp_per_capita", name: "GDP per capita", series: "gdp_per_capita", kind: "income" },
+  { id: "gdp", name: "GDP", series: "gdp", kind: "output", dollars: false, unit: "billion" },
+  { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false, unit: "billion" },
+  { id: "m1", name: "M1", series: "m1", kind: "money", dollars: false, unit: "billion" },
+  { id: "base", name: "Monetary base", series: "base", kind: "money", dollars: false, unit: "billion" },
   { id: "dxy", name: "Broad dollar", series: "dxy", kind: "numeraire", dollars: false },
   { id: "homes_msp", name: "Median home", series: "homes_msp", kind: "asset" },
   { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "index", dollars: false },
@@ -137,10 +137,11 @@ function scale(yardId, y0, m0, y1, m1) {
 
 function money(n, digits) {
   if (n == null || !isFinite(n)) return "—";
-  const d = digits != null ? digits : Math.abs(n) >= 1000 ? 0 : Math.abs(n) >= 100 ? 1 : 2;
   const abs = Math.abs(n);
+  const d =
+    digits != null ? digits : abs >= 1000 ? 0 : abs >= 100 ? 1 : abs >= 1 ? 2 : 3;
   const s = abs.toLocaleString("en-US", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: abs < 1 ? d : 0,
     maximumFractionDigits: d,
   });
   return (n < 0 ? "-$" : "$") + s;
@@ -172,31 +173,55 @@ function nowActual() {
   return atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
 }
 
-function yearPartial(ser, year) {
-  if (!ser || !ser.years || ser.years[ser.years.length - 1] !== year) return false;
-  const row = ser.monthly && ser.monthly[String(year)];
-  if (!row || ser.freq === "annual") return false;
+function yearSlots(ser, year) {
+  const row = ser && ser.monthly && ser.monthly[String(year)];
+  if (!row || !row.some((v) => v != null)) return null;
   const idx =
     ser.freq === "quarterly"
       ? [0, 3, 6, 9]
       : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  const slots = idx.map((i) => row[i]);
-  const n = slots.filter((v) => v != null).length;
-  if (!n || n === slots.length) return false;
-  return slots[slots.length - 1] == null;
+  return idx.map((i) => row[i] != null);
+}
+
+function yearKind(ser, year) {
+  const filled = yearSlots(ser, year);
+  if (!filled) return "plain";
+  if (filled.every(Boolean)) return "avg";
+  let seenGap = false;
+  let trailing = true;
+  for (const ok of filled) {
+    if (!ok) seenGap = true;
+    else if (seenGap) trailing = false;
+  }
+  const last = ser.years && ser.years[ser.years.length - 1] === year;
+  if (last && trailing && !filled[filled.length - 1]) return "ytd";
+  return "partial";
 }
 
 function whenLabel(year, month, ser) {
-  if (!month) return yearPartial(ser, year) ? year + " YTD" : String(year);
+  if (!month) {
+    const kind = yearKind(ser, year);
+    if (kind === "ytd") return year + " YTD";
+    if (kind === "partial") return year + " partial";
+    if (kind === "avg") return year + " avg";
+    return String(year);
+  }
   return MONTHS[month].label + " " + year;
 }
 
-function gapNote(ser, year, month, label) {
-  if (!ser || !month) return "";
-  if (atYear(ser, year) == null) return "";
-  if (atMonth(ser, year, month) != null) return "";
-  const name = label || ser.name;
-  if (ser.freq === "annual") return name + " is annual";
+function holeNote(ser, year, month, label) {
+  if (!ser) return "";
+  const name = label || ser.name || "Series";
+  const years = ser.years || [];
+  if (atYear(ser, year) == null) {
+    if (!years.length) return name + " has no prints";
+    if (year < years[0]) return name + " starts in " + years[0];
+    if (year > years[years.length - 1]) return name + " ends in " + years[years.length - 1];
+    return name + " has no " + year + " print";
+  }
+  if (!month || atMonth(ser, year, month) != null) return "";
+  const row = ser.monthly && ser.monthly[String(year)];
+  if (!row || !row.some((v) => v != null)) return name + " is annual";
   if (ser.freq === "quarterly") return name + " is quarterly";
   return name + " has no " + MONTHS[month].label + " print";
 }
@@ -204,9 +229,45 @@ function gapNote(ser, year, month, label) {
 function explainGap(ser, label) {
   if (!ser) return "";
   return (
-    gapNote(ser, state.thenYear, state.thenMonth, label) ||
-    gapNote(ser, state.nowYear, state.nowMonth, label)
+    holeNote(ser, state.thenYear, state.thenMonth, label) ||
+    holeNote(ser, state.nowYear, state.nowMonth, label)
   );
+}
+
+function isM1(meta) {
+  return !!meta && !meta.typed && (meta.series === "m1" || meta.id === "m1");
+}
+
+function spanYears() {
+  function pt(y, m) {
+    return y + ((m || 6) - 0.5) / 12;
+  }
+  return Math.abs(
+    pt(state.nowYear, state.nowMonth) - pt(state.thenYear, state.thenMonth)
+  );
+}
+
+function pace(vs) {
+  if (vs == null || !isFinite(vs)) return null;
+  const years = spanYears();
+  if (years < 1) {
+    return {
+      text: pct(vs),
+      tone: vs > 8 ? "hot" : vs < -8 ? "cool" : "",
+      perYear: false,
+    };
+  }
+  const factor = 1 + vs / 100;
+  if (!(factor > 0)) {
+    return { text: pct(vs), tone: vs > 0 ? "hot" : "cool", perYear: false };
+  }
+  const ann = (Math.pow(factor, 1 / years) - 1) * 100;
+  const sign = ann > 0 ? "+" : "";
+  return {
+    text: sign + ann.toFixed(1) + "%/yr",
+    tone: ann > 2 ? "hot" : ann < -2 ? "cool" : "",
+    perYear: true,
+  };
 }
 
 function fmtPlain(n, dollars) {
@@ -217,6 +278,24 @@ function fmtPlain(n, dollars) {
 function compute() {
   const it = itemMeta();
   const yd = yardMeta();
+  const broken =
+    (isM1(it) || yd.id === "m1") &&
+    crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+  if (broken && isM1(it)) {
+    return {
+      it: it,
+      yd: yd,
+      from: null,
+      ratio: null,
+      expected: null,
+      actual: null,
+      vs: null,
+      mins0: null,
+      mins1: null,
+      u0: null,
+      u1: null,
+    };
+  }
   const from = thenAmount();
   const ratio = scale(yd.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
   const expected = from != null && ratio != null ? from * ratio : null;
@@ -235,7 +314,7 @@ function compute() {
     : null;
   let u0 = null;
   let u1 = null;
-  if (yd.stick) {
+  if (yd.stick && priced) {
     const px0 = atMonth(seriesOf(yd.id), state.thenYear, state.thenMonth);
     const px1 = atMonth(seriesOf(yd.id), state.nowYear, state.nowMonth);
     const nowDollars = it.typed ? from : actual;
@@ -339,20 +418,18 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
 }
 
 function renderHero(c) {
-  const unit = c.it.dollars === false || c.it.typed ? "" : c.it.unit || "";
+  const unit = c.it.typed ? "" : c.it.unit || "";
+  const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
+  const showFrom = c.it.typed ? fmtPlain(c.from, c.it.dollars) : c.from == null ? "—" : fmtPlain(c.from, c.it.dollars);
 
   setHeroBay(
     "heroFromSide",
     "heroFrom",
     "heroFromUnit",
     "heroFromCap",
-    c.from == null ? null : fmtPlain(c.from, c.it.dollars),
+    showFrom,
     unit,
-    whenLabel(
-      state.thenYear,
-      state.thenMonth,
-      c.it.typed ? null : seriesOf(c.it.series || c.it.id)
-    )
+    whenLabel(state.thenYear, state.thenMonth, itemSer)
   );
 
   setHeroBay(
@@ -360,27 +437,31 @@ function renderHero(c) {
     "heroTo",
     "heroToUnit",
     "heroBy",
-    c.expected == null ? null : fmtPlain(c.expected, c.it.dollars),
+    c.expected == null ? "—" : fmtPlain(c.expected, c.it.dollars),
     unit,
-    c.yd.name +
-      " · " +
-      whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id))
+    c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id))
   );
 
   const yardSer = seriesOf(c.yd.id);
-  const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
+  const m1Cross = crossesM1Break(
+    state.thenYear,
+    state.thenMonth,
+    state.nowYear,
+    state.nowMonth
+  );
   const m1Note =
-    c.yd.id === "m1" &&
-    c.ratio == null &&
-    crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)
-      ? "M1 redefined May 2020"
+    (c.yd.id === "m1" || isM1(c.it)) && m1Cross ? "M1 redefined May 2020" : "";
+  const dxyNote =
+    c.yd.id === "dxy" && (state.thenYear < 2006 || state.nowYear < 2006)
+      ? "Broad dollar is goods only before 2006"
       : "";
-  const note = m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
+  const note =
+    m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name) || dxyNote;
   const measure = $("heroMeasure");
   if (note) {
     measure.hidden = false;
     measure.textContent = note;
-  } else if (c.yd.stick) {
+  } else if (c.yd.stick && c.it.dollars !== false) {
     measure.hidden = false;
     measure.textContent =
       fmtMeasure(c.u0) +
@@ -395,19 +476,20 @@ function renderHero(c) {
     measure.hidden = true;
   }
 
-  if (c.actual != null && c.vs != null) {
-    const actualYtd =
-      !state.nowMonth &&
-      yearPartial(seriesOf(c.it.series || c.it.id), state.nowYear);
+  if (!c.it.typed) {
+    const kind = !state.nowMonth ? yearKind(itemSer, state.nowYear) : "plain";
+    const paceNow = pace(c.vs);
+    const prefix =
+      kind === "ytd" ? "Actual YTD · " : kind === "partial" ? "Actual partial · " : "Actual · ";
     setHeroBay(
       "heroActualSide",
       "heroActual",
       "heroActualUnit",
       "heroCheck",
-      fmtPlain(c.actual, c.it.dollars),
+      c.actual == null ? "—" : fmtPlain(c.actual, c.it.dollars),
       unit,
-      (actualYtd ? "Actual YTD · " : "Actual · ") + pct(c.vs),
-      c.vs > 8 ? "hot" : c.vs < -8 ? "cool" : ""
+      c.actual != null && paceNow ? prefix + paceNow.text : "Actual",
+      paceNow ? paceNow.tone : ""
     );
   } else {
     setHeroBay("heroActualSide", "heroActual", "heroActualUnit", "heroCheck", null);
@@ -423,30 +505,35 @@ function renderHeat(c) {
     if (it.typed) continue;
     const a0 = atMonth(seriesOf(it.series || it.id), state.thenYear, state.thenMonth);
     const a1 = atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
+    if (it.series === "m1" && crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)) {
+      continue;
+    }
     if (a0 == null || a1 == null || a0 === 0) continue;
     const r = c.ratio;
     if (r == null) continue;
     const exp = a0 * r;
     const vs = ((a1 - exp) / exp) * 100;
-    const hot = vs > 8 ? " is-hot" : vs < -8 ? " is-cool" : "";
+    const step = pace(vs);
+    if (!step) continue;
+    const hot = step.tone === "hot" ? " is-hot" : step.tone === "cool" ? " is-cool" : "";
     bits.push(
       '<span class="chip' +
         hot +
         '"><b>' +
         it.name +
         "</b>" +
-        pct(vs) +
+        step.text +
         "</span>"
     );
   }
   el.innerHTML = bits.join("");
   const cap = $("heatCap");
+  const perYear = bits.length && pace(1) && pace(1).perYear;
   if (bits.length && c.ratio != null) {
     cap.hidden = false;
-    cap.textContent =
-      "Versus " +
-      c.yd.name +
-      " — how far each real price sits from what that measure said it should be.";
+    cap.textContent = perYear
+      ? "Versus " + c.yd.name + ", per year."
+      : "Versus " + c.yd.name + ", over this span.";
   } else {
     cap.hidden = true;
     cap.textContent = "";
@@ -456,7 +543,7 @@ function renderHeat(c) {
   if (c.it.dollars !== false && c.mins0 != null) {
     work.hidden = false;
     work.textContent =
-      "Work time — minutes of a production worker’s pay to buy it: " +
+      "Work time, production wage since 1964: " +
       fmtMins(c.mins0) +
       " then → " +
       fmtMins(c.mins1) +
