@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v27";
+        var EXPECTED = "v36";
         window.__DV_EXPECTED = EXPECTED;
       } catch (e) {}
     })();
@@ -113,7 +113,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=36" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -121,7 +121,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v27</span>
+        <span class="ver" id="verBadge" title="Build">v36</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -168,7 +168,7 @@
           </div>
         </div>
       </div>
-      <div class="dial-row">
+      <div class="dial-row" id="itemRow">
         <div class="dial dial-wide">
           <div class="dial-label">Item</div>
           <div class="drum-shell"><div class="drum drum-wide" id="drumItem" data-wheel="item"></div></div>
@@ -177,23 +177,15 @@
           <div class="dial-label">In terms of</div>
           <div class="drum-shell"><div class="drum drum-wide" id="drumYard" data-wheel="yard"></div></div>
         </div>
-      </div>
-      <div class="amount" id="amountWrap" hidden>
-        <label for="amount">Amount</label>
-        <span class="amount-prefix">$</span>
-        <input
-          id="amount"
-          type="text"
-          inputmode="decimal"
-          enterkeyhint="done"
-          autocomplete="off"
-          value="1"
-        />
+        <div class="dial dial-amt" id="amountDial" hidden>
+          <div class="dial-label">Amount</div>
+          <div class="drum-shell"><div class="drum" id="drumAmount" data-wheel="amount"></div></div>
+        </div>
       </div>
     </section>
   </div>
   </div>
-  <script src="app.js?v=27" defer></script>
+  <script src="app.js?v=36" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>

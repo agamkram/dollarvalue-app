@@ -1,4 +1,4 @@
-const APP_VERSION = "v27";
+const APP_VERSION = "v36";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -140,7 +140,7 @@ function money(n, digits) {
   const d = digits != null ? digits : Math.abs(n) >= 1000 ? 0 : Math.abs(n) >= 100 ? 1 : 2;
   const abs = Math.abs(n);
   const s = abs.toLocaleString("en-US", {
-    minimumFractionDigits: d,
+    minimumFractionDigits: 0,
     maximumFractionDigits: d,
   });
   return (n < 0 ? "-$" : "$") + s;
@@ -283,19 +283,55 @@ function setHeroUnit(id, unit) {
   el.textContent = unit.replace(/^\//, "");
 }
 
+function fitHeroAmt(el, side) {
+  if (!el || !side || side.classList.contains("is-empty") || !el.textContent) {
+    if (el) el.style.fontSize = "";
+    return;
+  }
+  const room = side.clientWidth - 8;
+  if (room <= 0) return;
+  const max = 40.8;
+  const min = 11;
+  el.style.fontSize = max + "px";
+  if (el.scrollWidth <= room) return;
+  let lo = min;
+  let hi = max;
+  while (hi - lo > 0.25) {
+    const mid = (lo + hi) / 2;
+    el.style.fontSize = mid + "px";
+    if (el.scrollWidth <= room) lo = mid;
+    else hi = mid;
+  }
+  el.style.fontSize = lo + "px";
+}
+
+function fitHeroAmts() {
+  const pairs = [
+    ["heroFromSide", "heroFrom"],
+    ["heroToSide", "heroTo"],
+    ["heroActualSide", "heroActual"],
+  ];
+  for (const [sideId, amtId] of pairs) {
+    fitHeroAmt($(amtId), $(sideId));
+  }
+}
+
 function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
   const side = $(sideId);
+  const amtEl = $(amtId);
   const capEl = $(capId);
   if (amt == null || amt === "") {
     side.classList.add("is-empty");
-    $(amtId).textContent = "";
+    amtEl.textContent = "";
+    amtEl.style.fontSize = "";
     setHeroUnit(unitId, "");
     capEl.className = "hero-cap";
     capEl.textContent = "";
     return;
   }
   side.classList.remove("is-empty");
-  $(amtId).textContent = amt;
+  amtEl.textContent = amt;
+  amtEl.style.fontSize = "";
   setHeroUnit(unitId, unit || "");
   capEl.className =
     "hero-cap" + (hot === "hot" ? " is-hot" : hot === "cool" ? " is-cool" : "");
@@ -376,6 +412,8 @@ function renderHero(c) {
   } else {
     setHeroBay("heroActualSide", "heroActual", "heroActualUnit", "heroCheck", null);
   }
+
+  requestAnimationFrame(fitHeroAmts);
 }
 
 function renderHeat(c) {
@@ -428,15 +466,39 @@ function renderHeat(c) {
   }
 }
 
+function amountOptions() {
+  const opts = [{ id: 1, label: "$1" }];
+  for (let n = 10; n <= 5000; n += 10) {
+    opts.push({ id: n, label: "$" + n.toLocaleString("en-US") });
+  }
+  return opts;
+}
+
+function syncAmountDial() {
+  const show = !!itemMeta().typed;
+  const dial = $("amountDial");
+  const row = $("itemRow");
+  dial.hidden = !show;
+  row.classList.toggle("has-amt", show);
+  if (show) {
+    lastDrumH = 0;
+    requestAnimationFrame(() => {
+      sizeDrums();
+      drums.forEach((d) => d.resnap());
+    });
+  }
+}
+
 function renderAll() {
   const c = compute();
   renderHero(c);
   renderHeat(c);
-  $("amountWrap").hidden = !itemMeta().typed;
+  syncAmountDial();
   sizeDrums();
 }
 
-function mountDrum(el, options, selectedId, onChange) {
+function mountDrum(el, options, selectedId, onChange, conf) {
+  const flickGain = (conf && conf.flickGain) || 1;
   const ul = document.createElement("ul");
   ul.className = "drum-list";
   options.forEach((opt) => {
@@ -452,6 +514,7 @@ function mountDrum(el, options, selectedId, onChange) {
   });
   el.innerHTML = "";
   el.appendChild(ul);
+  if (flickGain > 1) el.classList.add("drum-fast");
 
   function highlight(id) {
     ul.querySelectorAll("li").forEach((li) => {
@@ -506,10 +569,102 @@ function mountDrum(el, options, selectedId, onChange) {
           selectedId = opt.id;
           onChange(opt.id);
         }
+        if (flickGain > 1) {
+          lock = true;
+          scrollToId(opt.id, true);
+          setTimeout(() => {
+            lock = false;
+          }, 220);
+        }
       }, 120);
     },
     { passive: true }
   );
+
+  if (flickGain > 1) {
+    let lastY = 0;
+    let lastT = 0;
+    let vel = 0;
+    let dragging = false;
+    let raf = 0;
+
+    const stopCoast = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    const coast = () => {
+      stopCoast();
+      const tick = () => {
+        if (Math.abs(vel) < 0.04) {
+          raf = 0;
+          el.dispatchEvent(new Event("scroll"));
+          return;
+        }
+        el.scrollTop += vel * 16;
+        vel *= 0.955;
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+
+    el.addEventListener(
+      "touchstart",
+      (e) => {
+        stopCoast();
+        dragging = true;
+        lastY = e.touches[0].clientY;
+        lastT = performance.now();
+        vel = 0;
+      },
+      { passive: true }
+    );
+
+    el.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!dragging) return;
+        e.preventDefault();
+        const y = e.touches[0].clientY;
+        const t = performance.now();
+        const dy = lastY - y;
+        const dt = Math.max(8, t - lastT);
+        el.scrollTop += dy * flickGain;
+        vel = (dy * flickGain) / dt;
+        lastY = y;
+        lastT = t;
+      },
+      { passive: false }
+    );
+
+    el.addEventListener(
+      "touchend",
+      () => {
+        dragging = false;
+        coast();
+      },
+      { passive: true }
+    );
+
+    el.addEventListener(
+      "touchcancel",
+      () => {
+        dragging = false;
+        coast();
+      },
+      { passive: true }
+    );
+
+    el.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        stopCoast();
+        el.scrollTop += e.deltaY * flickGain;
+      },
+      { passive: false }
+    );
+  }
 
   function snapNow() {
     lock = true;
@@ -610,16 +765,18 @@ function boot(data) {
       renderAll();
     })
   );
-
-  const amt = $("amount");
-  amt.addEventListener("input", () => {
-    const n = parseFloat(String(amt.value).replace(/[^0-9.]/g, ""));
-    state.amount = isFinite(n) ? n : 0;
-    renderAll();
-  });
-  amt.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") amt.blur();
-  });
+  drums.push(
+    mountDrum(
+      $("drumAmount"),
+      amountOptions(),
+      state.amount,
+      (id) => {
+        state.amount = Number(id);
+        renderAll();
+      },
+      { flickGain: 4 }
+    )
+  );
 
   lastDrumH = 0;
   pinShellViewport();
@@ -743,10 +900,14 @@ function sizeDrums() {
   const shell = document.querySelector(".drum-shell");
   if (!shell) return;
   const h = Math.round(shell.getBoundingClientRect().height);
-  if (h < 48 || h === lastDrumH) return;
+  if (h < 48 || h === lastDrumH) {
+    fitHeroAmts();
+    return;
+  }
   lastDrumH = h;
   document.documentElement.style.setProperty("--drum-h", h + "px");
   drums.forEach((d) => d.resnap());
+  fitHeroAmts();
 }
 
 function onViewport() {
@@ -758,4 +919,7 @@ window.addEventListener("resize", onViewport);
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", onViewport);
   window.visualViewport.addEventListener("scroll", onViewport);
+}
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(fitHeroAmts);
 }

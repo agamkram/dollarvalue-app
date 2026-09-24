@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 27;
+  --dv-css: 36;
 }
 
 *,
@@ -199,7 +199,7 @@ html.pwa-standalone .fit-stage {
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 0 1px;
+  padding: 0 4px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -214,14 +214,12 @@ html.pwa-standalone .fit-stage {
 .hero-amt {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(1.75rem, 9vw, 2.55rem);
-  letter-spacing: -0.02em;
+  font-size: 2.55rem;
+  letter-spacing: -0.03em;
   line-height: 0.95;
   color: var(--text);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  max-width: 100%;
 }
 
 .hero-amt-now {
@@ -363,13 +361,24 @@ html.pwa-standalone .dials {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.dial-pair,
+.dial-pair {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
 .dial-row {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.dial-row.has-amt {
+  grid-template-columns: 1.15fr 1.15fr 0.72fr;
 }
 
 .dial {
@@ -455,6 +464,10 @@ html.pwa-standalone .dials {
   );
 }
 
+.drum-fast {
+  scroll-snap-type: none;
+}
+
 .drum-list {
   list-style: none;
   margin: 0;
@@ -491,43 +504,8 @@ html.pwa-standalone .dials {
   font-size: 0.78rem;
 }
 
-.amount[hidden] {
+.dial-amt[hidden] {
   display: none !important;
-}
-
-.amount {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 8px;
-}
-
-.amount label {
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.amount-prefix {
-  color: var(--gold);
-  font-family: var(--mono);
-}
-
-.amount input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 1.05rem;
-  outline: none;
 }
 
 .about-body {
