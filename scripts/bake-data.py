@@ -59,7 +59,7 @@ FRED_SERIES = [
     ("homes_fhfa", "USSTHPI", "Home prices (FHFA)", "asset", "FHFA via FRED"),
     ("homes_msp", "MSPUS", "Median home price", "asset", "Census via FRED"),
     ("rent", "CUUR0000SEHA", "Rent of primary residence", "price", "BLS via FRED"),
-    ("medical", "CUUR0000SAM2", "Medical care", "price", "BLS via FRED"),
+    ("medical", "CUUR0000SAM2", "Medical care services", "price", "BLS via FRED"),
     ("used_cars", "CUUR0000SETA02", "Used cars", "price", "BLS via FRED"),
 ]
 
@@ -195,7 +195,7 @@ def pink_metals() -> dict[str, list[tuple[str, float]]]:
     wb = openpyxl.load_workbook(io.BytesIO(get(PINK_URL, timeout=90)), data_only=True)
     ws = wb["Monthly Prices"]
     header = None
-    out = {"Gold": [], "Silver": []}
+    out = {"Gold": [], "Silver": [], "Maize": [], "Wheat, US HRW": []}
     for i, row in enumerate(ws.iter_rows(values_only=True)):
         if i == 4:
             header = [str(c).strip() if c is not None else "" for c in row]
@@ -206,7 +206,7 @@ def pink_metals() -> dict[str, list[tuple[str, float]]]:
         if not m:
             continue
         iso = "%s-%s-01" % (m.group(1), m.group(2))
-        for name in ("Gold", "Silver"):
+        for name in out:
             v = num(row[header.index(name)])
             if v is None or v <= 0:
                 continue
@@ -374,6 +374,176 @@ def splice_sp(series: dict, raw: dict, shiller: list[tuple[str, float]]) -> None
     print("  stocks %s–%s" % (packed["years"][0], packed["years"][-1]))
 
 
+def measuringworth_dow() -> list[tuple[str, float]]:
+    """Daily closes from 16 Feb 1885. The modern index is unscaled; the
+    pre-1896 Dow Jones Average is already on that same scale."""
+    print("MeasuringWorth Dow…")
+    url = "https://www.measuringworth.com/datasets/DJA/result.php"
+    rows: dict[str, float] = {}
+    y = 1885
+    end_y = date.today().year
+    while y <= end_y:
+        y1 = min(y + 9, end_y)
+        data = urllib.parse.urlencode(
+            {
+                "monthStartD": "2" if y == 1885 else "1",
+                "dayStartD": "16" if y == 1885 else "1",
+                "yearStartD": str(y),
+                "monthEndD": "12",
+                "dayEndD": "31",
+                "yearEndD": str(y1),
+            }
+        ).encode()
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "User-Agent": UA,
+                "Referer": "https://www.measuringworth.com/datasets/DJA/",
+            },
+        )
+        html = urllib.request.urlopen(req, context=CTX, timeout=90).read().decode(
+            "utf-8", "replace"
+        )
+        found = re.findall(
+            r"<td>(\d{1,2}/\d{1,2}/\d{4})\s*&nbsp;</td><td>[^0-9]*([\d.]+)</td>",
+            html,
+        )
+        if len(found) < 100:
+            raise RuntimeError("measuringworth dow %s–%s n=%d" % (y, y1, len(found)))
+        for mdY, val in found:
+            month, day, year = mdY.split("/")
+            iso = "%04d-%02d-%02d" % (int(year), int(month), int(day))
+            rows[iso] = float(val)
+        print("  %s–%s n=%d" % (y, y1, len(found)))
+        y = y1 + 1
+        time.sleep(0.25)
+    obs = sorted(rows.items())
+    if not obs[0][0].startswith("1885-02"):
+        raise RuntimeError("measuringworth dow starts %s" % obs[0][0])
+    print("  %s–%s n=%d" % (obs[0][0], obs[-1][0], len(obs)))
+    return obs
+
+
+def splice_dow(series: dict, raw: dict, early: list[tuple[str, float]]) -> None:
+    fred = list(raw.get("djia") or [])
+    if not fred:
+        raise RuntimeError("no FRED DJIA")
+    fred_start = fred[0][0]
+    fred_map = {d: v for d, v in fred}
+    overlap = [(d, v) for d, v in early if d in fred_map and v]
+    if len(overlap) < 20:
+        raise RuntimeError("dow overlap n=%d from %s" % (len(overlap), fred_start))
+    ratios = [fred_map[d] / v for d, v in overlap]
+    mid = sorted(ratios)[len(ratios) // 2]
+    if not (0.99 <= mid <= 1.01):
+        raise RuntimeError("dow overlap scale %.4f" % mid)
+    merged = [(d, v) for d, v in early if d < fred_start]
+    merged += fred
+    packed = pack_obs(merged)
+    series["djia"] = {
+        "id": "djia",
+        "name": "Dow Jones",
+        "kind": "asset",
+        "source": "MeasuringWorth consistent daily close through the day before FRED, then DJIA via FRED",
+        "fred": "DJIA",
+        **packed,
+    }
+    print(
+        "  djia %s–%s fred from %s overlap=%.4f"
+        % (packed["years"][0], packed["years"][-1], fred_start, mid)
+    )
+
+
+def splice_pink_front(series: dict, raw: dict, pink: dict, sid: str, column: str) -> None:
+    """Keep the IMF series from its first month. Fill earlier months from the
+    pink-sheet column that matches that first year."""
+    fred = list(raw.get(sid) or [])
+    early = list(pink.get(column) or [])
+    if not fred or not early:
+        raise RuntimeError("missing %s or pink %s" % (sid, column))
+    fred_start = fred[0][0]
+    pink_map = {d: v for d, v in early}
+    ratios = []
+    for d, v in fred:
+        if d[:4] != fred_start[:4]:
+            break
+        pv = pink_map.get(d)
+        if pv:
+            ratios.append(v / pv)
+    if len(ratios) < 8:
+        raise RuntimeError("%s pink overlap n=%d" % (sid, len(ratios)))
+    mid = sorted(ratios)[len(ratios) // 2]
+    if not (0.99 <= mid <= 1.01):
+        raise RuntimeError("%s pink scale %.4f" % (sid, mid))
+    merged = [(d, v) for d, v in early if d < fred_start] + fred
+    packed = pack_obs(merged)
+    prev = series[sid]
+    prev.update(packed)
+    prev["source"] = "World Bank pink sheet through %s, then %s" % (
+        fred_start[:7],
+        prev.get("source") or "IMF via FRED",
+    )
+    print(
+        "  %s %s–%s pink before %s scale=%.4f"
+        % (sid, packed["years"][0], packed["years"][-1], fred_start[:7], mid)
+    )
+
+
+CENSUS_H5 = (
+    "https://www2.census.gov/programs-surveys/cps/tables/time-series/"
+    "historical-income-households/h05.xlsx"
+)
+
+
+def census_income() -> list[tuple[int, float]]:
+    print("Census household income…")
+    wb = openpyxl.load_workbook(io.BytesIO(get(CENSUS_H5, timeout=60)), data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+    start = next(i for i, row in enumerate(rows) if row and row[0] == "All Races")
+    out = []
+    for row in rows[start + 1 :]:
+        label = str(row[0]).strip() if row and row[0] is not None else ""
+        if not label[:4].isdigit():
+            if out:
+                break
+            continue
+        year = int(label[:4])
+        val = num(row[2])
+        if val is None:
+            continue
+        if out and out[-1][0] == year:
+            continue
+        out.append((year, val))
+    out.sort()
+    if not out or out[0][0] != 1967:
+        raise RuntimeError("census income starts %s" % (out[:1],))
+    print("  %s–%s n=%d" % (out[0][0], out[-1][0], len(out)))
+    return out
+
+
+def splice_income(series: dict, raw: dict, census: list[tuple[int, float]]) -> None:
+    fred = list(raw.get("income_hh") or [])
+    if not fred:
+        raise RuntimeError("no FRED household income")
+    fred_year = int(fred[0][0][:4])
+    cmap = {y: v for y, v in census}
+    if fred_year not in cmap:
+        raise RuntimeError("census has no %s" % fred_year)
+    if abs(cmap[fred_year] - fred[0][1]) / fred[0][1] > 0.005:
+        raise RuntimeError(
+            "income %s census %s fred %s" % (fred_year, cmap[fred_year], fred[0][1])
+        )
+    early = [("%04d-01-01" % y, v) for y, v in census if y < fred_year]
+    packed = pack_obs(early + fred)
+    prev = series["income_hh"]
+    prev.update(packed)
+    prev["source"] = "Census nominal median from 1967; FRED MEHOINUSA646N from %s" % fred_year
+    print("  income %s–%s fred from %s" % (packed["years"][0], packed["years"][-1], fred_year))
+
+
 def splice_dollar(series: dict, raw: dict) -> None:
     old = raw.get("dxy_old") or []
     new = raw.get("dxy") or []
@@ -415,7 +585,7 @@ def main() -> None:
             if len(obs) < 8:
                 print("  skip %s (%s) n=%d" % (sid, fred, len(obs)))
                 continue
-            if sid in ("bitcoin", "stocks", "dxy", "dxy_old"):
+            if sid in ("bitcoin", "stocks", "dxy", "dxy_old", "djia", "wheat", "corn", "income_hh"):
                 raw[sid] = obs
             packed = pack_obs(obs)
             series[sid] = {
@@ -451,12 +621,16 @@ def main() -> None:
     metals = pink_metals()
     series["gold"] = build_gold(metals["Gold"])
     series["silver_spot"] = build_silver(metals["Silver"])
+    splice_pink_front(series, raw, metals, "wheat", "Wheat, US HRW")
+    splice_pink_front(series, raw, metals, "corn", "Maize")
+    splice_income(series, raw, census_income())
     gspan = series["gold"]["years"]
     sspan = series["silver_spot"]["years"]
     print("  gold %s–%s" % (gspan[0], gspan[-1]))
     print("  silver %s–%s" % (sspan[0], sspan[-1]))
     splice_bitcoin(series, raw, bitstamp_btc())
     splice_sp(series, raw, shiller_sp())
+    splice_dow(series, raw, measuringworth_dow())
     splice_dollar(series, raw)
 
     # One CPI yardstick: Minneapolis 1800–1912 scaled onto BLS 1913–now.

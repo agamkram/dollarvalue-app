@@ -1,4 +1,4 @@
-const APP_VERSION = "v42";
+const APP_VERSION = "v45";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -50,7 +50,7 @@ const THINGS = [
   { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "index", dollars: false },
   { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false },
   { id: "college", name: "College index", series: "college", kind: "index", dollars: false },
-  { id: "medical", name: "Medical index", series: "medical", kind: "index", dollars: false },
+  { id: "medical", name: "Medical services", series: "medical", kind: "index", dollars: false },
   { id: "used_cars", name: "Used car index", series: "used_cars", kind: "index", dollars: false },
   { id: "nasdaq", name: "NASDAQ", series: "nasdaq", kind: "index", dollars: false },
   { id: "stocks", name: "S&P 500", series: "stocks", kind: "index", dollars: false },
@@ -609,6 +609,12 @@ function plainLine(c, note) {
   const rose = c.actual > c.from;
   const fell = c.actual < c.from;
   const yardRose = c.ratio > 1;
+  if (!rose && !fell && c.vs > 0.5) {
+    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " fell. Following it would have meant " + exp + "." + lagWords(c.vs);
+  }
+  if (!rose && !fell && c.vs < -0.5) {
+    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " rose. Keeping up would have meant " + exp + "." + lagWords(c.vs);
+  }
   if (rose && c.vs < -0.5 && yardRose) {
     return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " rose faster. Keeping up would have meant " + exp + "." + lagWords(c.vs);
   }
