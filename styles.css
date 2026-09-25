@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 45;
+  --dv-css: 50;
 }
 
 *,
@@ -179,11 +179,11 @@ html.pwa-standalone .fit-stage {
 
 .hero {
   flex-shrink: 0;
-  height: 70px;
+  height: auto;
+  min-height: 78px;
   box-sizing: border-box;
   display: flex;
   gap: 3px;
-  min-height: 0;
   padding: 0;
   background: transparent;
   border: 0;
@@ -198,8 +198,8 @@ html.pwa-standalone .fit-stage {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  padding: 0 4px;
+  gap: 2px;
+  padding: 6px 4px 5px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -229,8 +229,8 @@ html.pwa-standalone .fit-stage {
 .hero-unit {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.5rem;
-  line-height: 1;
+  font-size: 0.68rem;
+  line-height: 1.1;
   color: var(--muted);
   letter-spacing: 0.02em;
   max-width: 100%;
@@ -243,12 +243,17 @@ html.pwa-standalone .fit-stage {
 
 .hero-cap {
   margin: 0;
-  font-size: 0.5rem;
-  line-height: 1;
-  color: var(--muted);
-  white-space: nowrap;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  white-space: normal;
   overflow: hidden;
   max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .hero-cap.is-hot {
@@ -292,11 +297,14 @@ html.pwa-standalone .fit-stage {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
 }
 
 .scan-cap {
   margin: 0;
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   line-height: 1.3;
   color: var(--muted);
   padding: 0 2px;
@@ -322,42 +330,45 @@ html.pwa-standalone .fit-stage {
 .heat {
   flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 0;
-  overflow: hidden;
+  gap: 10px;
+  min-width: 0;
 }
 
-.chip {
-  flex: 0 0 auto;
-  box-sizing: border-box;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  background: var(--bg2);
-  border-radius: 999px;
-  padding: 0 6px;
-  font-size: 0.55rem;
-  line-height: 1;
+.rank {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
-.chip b {
+.rank[hidden] {
+  display: none !important;
+}
+
+.rank-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.rank-item {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rank b {
   font-weight: 600;
   color: var(--text);
-  padding-right: 3px;
-}
-
-.chip.is-hot {
-  border-color: rgba(212, 91, 91, 0.45);
-  color: var(--red);
-}
-.chip.is-cool {
-  border-color: rgba(61, 154, 106, 0.45);
-  color: var(--green);
 }
 
 .dials {

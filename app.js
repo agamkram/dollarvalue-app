@@ -1,4 +1,4 @@
-const APP_VERSION = "v45";
+const APP_VERSION = "v50";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -17,7 +17,7 @@ const MONTHS = [
 ];
 
 const DEFLATORS = [
-  { id: "cpi", name: "CPI-U", hint: "Official urban basket" },
+  { id: "cpi", name: "CPI", hint: "City households, all items" },
   { id: "pce", name: "PCE", hint: "Fed’s preferred" },
   { id: "chained_cpi", name: "Chained CPI", hint: "Substitution built in" },
   { id: "gdp_deflator", name: "GDP deflator", hint: "All output, not just households" },
@@ -272,11 +272,12 @@ function pace(vs) {
       text: pct(vs),
       tone: vs > 8 ? "hot" : vs < -8 ? "cool" : "",
       perYear: false,
+      n: vs,
     };
   }
   const factor = 1 + vs / 100;
   if (!(factor > 0)) {
-    return { text: pct(vs), tone: vs > 0 ? "hot" : "cool", perYear: false };
+    return { text: pct(vs), tone: vs > 0 ? "hot" : "cool", perYear: false, n: vs };
   }
   const ann = (Math.pow(factor, 1 / years) - 1) * 100;
   const sign = ann > 0 ? "+" : "";
@@ -284,6 +285,7 @@ function pace(vs) {
     text: sign + ann.toFixed(1) + "%/yr",
     tone: ann > 2 ? "hot" : ann < -2 ? "cool" : "",
     perYear: true,
+    n: ann,
   };
 }
 
@@ -558,7 +560,7 @@ function plainLine(c, note) {
   if (c.it.typed) {
     const amt = fmtPlain(c.from, true);
     if (c.yd.id === "cpi") {
-      return amt + " in " + thenL + " buys what " + exp + " buys in " + nowL + ", on the household basket.";
+      return amt + " in " + thenL + " buys what " + exp + " buys in " + nowL + ", in everyday prices.";
     }
     if (yardRole(c.yd) === "prices") {
       return amt + " in " + thenL + " has the buying power of " + exp + " in " + nowL + ", using " + y + ".";
@@ -630,38 +632,53 @@ function plainLine(c, note) {
   return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + ", which pointed to " + exp + ".";
 }
 
-function renderHeat(c) {
-  const el = $("heat");
-  const bits = [];
-  for (const it of ITEMS) {
-    if (it.typed) continue;
-    const a0 = atMonth(seriesOf(it.series || it.id), state.thenYear, state.thenMonth);
-    const a1 = atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
-    if (it.series === "m1" && crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)) {
-      continue;
-    }
-    if (a0 == null || a1 == null || a0 === 0) continue;
-    const r = c.ratio;
-    if (r == null) continue;
-    const exp = a0 * r;
-    const vs = ((a1 - exp) / exp) * 100;
-    const step = pace(vs);
-    if (!step) continue;
-    const hot = step.tone === "hot" ? " is-hot" : step.tone === "cool" ? " is-cool" : "";
-    bits.push(
-      '<span class="chip' +
-        hot +
-        '"><b>' +
-        it.name +
-        "</b>" +
-        step.text +
-        "</span>"
-    );
+function fillRank(row, label, items) {
+  row.replaceChildren();
+  if (!items.length) {
+    row.hidden = true;
+    return;
   }
-  el.innerHTML = bits.join("");
+  row.hidden = false;
+  const lab = document.createElement("span");
+  lab.className = "rank-label";
+  lab.textContent = label;
+  row.appendChild(lab);
+  items.forEach((item) => {
+    const line = document.createElement("span");
+    line.className = "rank-item";
+    const name = document.createElement("b");
+    name.textContent = item.name;
+    line.appendChild(name);
+    line.appendChild(document.createTextNode(" " + item.step.text));
+    row.appendChild(line);
+  });
+}
+
+function renderHeat(c) {
+  const scored = [];
+  if (c.ratio != null) {
+    for (const it of ITEMS) {
+      if (it.typed || it.id === c.it.id) continue;
+      const a0 = atMonth(seriesOf(it.series || it.id), state.thenYear, state.thenMonth);
+      const a1 = atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
+      if (it.series === "m1" && crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)) {
+        continue;
+      }
+      if (a0 == null || a1 == null || a0 === 0) continue;
+      const exp = a0 * c.ratio;
+      if (!exp) continue;
+      const step = pace(((a1 - exp) / exp) * 100);
+      if (!step || !isFinite(step.n) || step.n === 0) continue;
+      scored.push({ name: it.name, step: step });
+    }
+  }
+  const ahead = scored.filter((s) => s.step.n > 0).sort((a, b) => b.step.n - a.step.n).slice(0, 3);
+  const behind = scored.filter((s) => s.step.n < 0).sort((a, b) => a.step.n - b.step.n).slice(0, 3);
+  fillRank($("rankAhead"), "Ahead", ahead);
+  fillRank($("rankBehind"), "Behind", behind);
   const cap = $("heatCap");
-  const perYear = bits.length && pace(1) && pace(1).perYear;
-  if (bits.length && c.ratio != null) {
+  const perYear = pace(1) && pace(1).perYear;
+  if ((ahead.length || behind.length) && c.ratio != null) {
     cap.hidden = false;
     cap.textContent = perYear
       ? "Versus " + c.yd.name + ", per year."

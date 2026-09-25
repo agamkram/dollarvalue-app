@@ -28,7 +28,7 @@ CTX = ssl.create_default_context()
 UA = "DollarValue/1 (markmaga.com; bake)"
 
 FRED_SERIES = [
-    ("cpi_u", "CPIAUCNS", "CPI-U", "price", "BLS via FRED"),
+    ("cpi_u", "CPIAUCNS", "CPI", "price", "BLS via FRED"),
     ("pce", "PCEPI", "PCE", "price", "BEA via FRED"),
     ("gdp_deflator", "GDPDEF", "GDP deflator", "price", "BEA via FRED"),
     ("chained_cpi", "SUUR0000SA0", "Chained CPI", "price", "BLS via FRED"),
@@ -646,7 +646,7 @@ def main() -> None:
             annual += list(bls["annual"])
             series["cpi"] = {
                 "id": "cpi",
-                "name": "CPI-U",
+                "name": "CPI",
                 "kind": "price",
                 "source": "Minneapolis Fed (1800–1912) + BLS (1913–)",
                 "years": years,
