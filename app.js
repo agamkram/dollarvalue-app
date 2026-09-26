@@ -1,4 +1,4 @@
-const APP_VERSION = "v63";
+const APP_VERSION = "v64";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -849,62 +849,7 @@ function plainLine(c, note) {
   return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + yardSpan + ", which pointed to " + exp + ".";
 }
 
-function fillRank(row, label, items) {
-  row.replaceChildren();
-  if (!items.length) {
-    row.hidden = true;
-    return;
-  }
-  row.hidden = false;
-  const lab = document.createElement("span");
-  lab.className = "rank-label";
-  lab.textContent = label;
-  row.appendChild(lab);
-  items.forEach((item) => {
-    const line = document.createElement("span");
-    line.className = "rank-item";
-    const name = document.createElement("b");
-    name.textContent = item.name;
-    line.appendChild(name);
-    line.appendChild(document.createTextNode(" " + item.step.text));
-    row.appendChild(line);
-  });
-}
-
-function renderHeat(c) {
-  const scored = [];
-  if (c.ratio != null) {
-    for (const it of ITEMS) {
-      if (it.typed || it.id === c.it.id) continue;
-      const a0 = atMonth(seriesOf(it.series || it.id), state.thenYear, state.thenMonth);
-      const a1 = atMonth(seriesOf(it.series || it.id), state.nowYear, state.nowMonth);
-      if (it.series === "m1" && crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth)) {
-        continue;
-      }
-      if (a0 == null || a1 == null || a0 === 0) continue;
-      const exp = a0 * c.ratio;
-      if (!exp) continue;
-      const step = pace(((a1 - exp) / exp) * 100);
-      if (!step || !isFinite(step.n) || step.n === 0) continue;
-      scored.push({ name: it.name, step: step });
-    }
-  }
-  const ahead = scored.filter((s) => s.step.n > 0).sort((a, b) => b.step.n - a.step.n).slice(0, 3);
-  const behind = scored.filter((s) => s.step.n < 0).sort((a, b) => a.step.n - b.step.n).slice(0, 3);
-  fillRank($("rankAhead"), "Ahead", ahead);
-  fillRank($("rankBehind"), "Behind", behind);
-  const cap = $("heatCap");
-  const perYear = pace(1) && pace(1).perYear;
-  if ((ahead.length || behind.length) && c.ratio != null) {
-    cap.hidden = false;
-    cap.textContent = perYear
-      ? "Versus " + c.yd.name + ", per year."
-      : "Versus " + c.yd.name + ", over this span.";
-  } else {
-    cap.hidden = true;
-    cap.textContent = "";
-  }
-
+function renderWork(c) {
   const work = $("work");
   if (c.it.dollars !== false && c.mins0 != null) {
     const thenFactory = state.thenYear < 1964;
@@ -1314,7 +1259,7 @@ function renderAll() {
   renderHero(c);
   renderWage();
   renderCounter();
-  renderHeat(c);
+  renderWork(c);
   renderChart();
   syncAmountDial();
   sizeDrums();

@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 63;
+  --dv-css: 64;
 }
 
 *,
@@ -339,29 +339,6 @@ html.pwa-standalone .fit-stage {
   height: 100%;
 }
 
-.scan {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  margin-top: 0;
-  padding-top: 4px;
-  border-top: 1px solid var(--line);
-}
-
-.scan-cap {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.3;
-  color: var(--muted);
-  padding: 0 2px;
-}
-
-.scan-cap[hidden] {
-  display: none !important;
-}
-
 .work {
   flex-shrink: 0;
   margin: 0;
@@ -373,50 +350,6 @@ html.pwa-standalone .fit-stage {
 
 .work[hidden] {
   display: none !important;
-}
-
-.heat {
-  flex-shrink: 0;
-  display: flex;
-  gap: 10px;
-  min-width: 0;
-}
-
-.rank {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin: 0;
-  min-width: 0;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.rank[hidden] {
-  display: none !important;
-}
-
-.rank-label {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.rank-item {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.rank b {
-  font-weight: 600;
-  color: var(--text);
 }
 
 .dials {
