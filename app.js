@@ -1,4 +1,4 @@
-const APP_VERSION = "v56";
+const APP_VERSION = "v57";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -659,8 +659,17 @@ function renderCounter() {
   if (hours) {
     if (dh0 && dh1) {
       hours.hidden = false;
-      const taxH = t0h && t1h ? " Tax " + t0h.text + " in " + t0h.y + ", " + t1h.text + " in " + t1h.y + "." : "";
-      hours.textContent = "In hours of that wage: debt " + dh0.text + " in " + dh0.y + ", " + dh1.text + " in " + dh1.y + "." + taxH;
+      const sameH = (a, b) => a.y === b.y && a.text === b.text;
+      const debtH = sameH(dh0, dh1)
+        ? "debt still " + dh0.text + " in " + dh0.y
+        : "debt " + dh0.text + " in " + dh0.y + ", " + dh1.text + " in " + dh1.y;
+      const taxH =
+        t0h && t1h
+          ? sameH(t0h, t1h)
+            ? " Tax still " + t0h.text + " in " + t0h.y + "."
+            : " Tax " + t0h.text + " in " + t0h.y + ", " + t1h.text + " in " + t1h.y + "."
+          : "";
+      hours.textContent = "In hours of that wage: " + debtH + "." + taxH;
     } else {
       hours.hidden = true;
     }
@@ -857,13 +866,16 @@ function renderHeat(c) {
 
   const work = $("work");
   if (c.it.dollars !== false && c.mins0 != null) {
+    const thenFactory = state.thenYear < 1964;
+    const nowFactory = state.nowYear < 1964;
+    const kind = thenFactory && nowFactory
+      ? "factory pay"
+      : !thenFactory && !nowFactory
+        ? "production wage"
+        : "factory pay then, production wage now";
     work.hidden = false;
     work.textContent =
-      "Work time, production wage: " +
-      fmtMins(c.mins0) +
-      " then → " +
-      fmtMins(c.mins1) +
-      " now";
+      "Work time, " + kind + ": " + fmtMins(c.mins0) + " then → " + fmtMins(c.mins1) + " now";
   } else {
     work.hidden = true;
   }
@@ -893,6 +905,7 @@ function syncAmountDial() {
 }
 
 function renderAll() {
+  syncMonthWheels();
   const c = compute();
   renderHero(c);
   renderWage();
@@ -911,6 +924,7 @@ function mountDrum(el, options, selectedId, onChange, conf) {
     li.dataset.id = String(opt.id);
     li.textContent = opt.label;
     li.addEventListener("click", () => {
+      if (dead.has(String(opt.id))) return;
       selectedId = opt.id;
       scrollToId(opt.id, true);
       onChange(opt.id);
@@ -959,6 +973,18 @@ function mountDrum(el, options, selectedId, onChange, conf) {
 
   let lock = false;
   let timer = 0;
+  let dead = new Set();
+
+  function nearestLive(i) {
+    const open = (n) => options[n] && !dead.has(String(options[n].id));
+    if (open(i)) return i;
+    for (let d = 1; d < options.length; d++) {
+      if (open(i - d)) return i - d;
+      if (open(i + d)) return i + d;
+    }
+    return 0;
+  }
+
   el.addEventListener(
     "scroll",
     () => {
@@ -966,9 +992,17 @@ function mountDrum(el, options, selectedId, onChange, conf) {
       clearTimeout(timer);
       timer = setTimeout(() => {
         if (lock) return;
-        const i = indexFromScroll();
+        const raw = indexFromScroll();
+        const i = nearestLive(raw);
         const opt = options[Math.max(0, Math.min(options.length - 1, i))];
-        if (!opt) return;
+        if (!opt || dead.has(String(opt.id))) return;
+        if (i !== raw) {
+          lock = true;
+          scrollToId(opt.id, true);
+          setTimeout(() => {
+            lock = false;
+          }, 220);
+        }
         highlight(opt.id);
         if (String(opt.id) !== String(selectedId)) {
           selectedId = opt.id;
@@ -1100,6 +1134,13 @@ function mountDrum(el, options, selectedId, onChange, conf) {
     resnap() {
       snapNow();
     },
+    mark(deadIds, lockAll) {
+      dead = new Set((deadIds || []).map(String));
+      el.classList.toggle("is-locked", !!lockAll);
+      ul.querySelectorAll("li").forEach((li) => {
+        li.classList.toggle("is-dead", dead.has(li.dataset.id));
+      });
+    },
   };
 }
 
@@ -1113,6 +1154,37 @@ function yearsList() {
 }
 
 const drums = [];
+let thenMonthDrum = null;
+let nowMonthDrum = null;
+
+function deadMonths(year) {
+  const yd = yardMeta();
+  const ser = seriesOf(yd.series || yd.id);
+  if (!ser) return { dead: [], annual: false };
+  const dead = [];
+  let any = false;
+  for (let m = 1; m <= 12; m++) {
+    if (atMonth(ser, year, m) == null) dead.push(m);
+    else any = true;
+  }
+  return { dead: dead, annual: !any && atYear(ser, year) != null };
+}
+
+function syncMonthWheels() {
+  if (!thenMonthDrum || !nowMonthDrum) return;
+  const a = deadMonths(state.thenYear);
+  const b = deadMonths(state.nowYear);
+  if (a.dead.indexOf(state.thenMonth) >= 0) {
+    state.thenMonth = 0;
+    thenMonthDrum.set(0);
+  }
+  if (b.dead.indexOf(state.nowMonth) >= 0) {
+    state.nowMonth = 0;
+    nowMonthDrum.set(0);
+  }
+  thenMonthDrum.mark(a.dead, a.annual);
+  nowMonthDrum.mark(b.dead, b.annual);
+}
 
 function boot(data) {
   state.data = data;
@@ -1146,18 +1218,15 @@ function boot(data) {
       renderAll();
     })
   );
-  drums.push(
-    mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
-      state.thenMonth = Number(id);
-      renderAll();
-    })
-  );
-  drums.push(
-    mountDrum($("drumNowMonth"), mOpts, state.nowMonth, (id) => {
-      state.nowMonth = Number(id);
-      renderAll();
-    })
-  );
+  thenMonthDrum = mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
+    state.thenMonth = Number(id);
+    renderAll();
+  });
+  nowMonthDrum = mountDrum($("drumNowMonth"), mOpts, state.nowMonth, (id) => {
+    state.nowMonth = Number(id);
+    renderAll();
+  });
+  drums.push(thenMonthDrum, nowMonthDrum);
   drums.push(
     mountDrum($("drumItem"), iOpts, state.item, (id) => {
       state.item = String(id);
