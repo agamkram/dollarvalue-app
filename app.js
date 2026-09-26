@@ -1,4 +1,4 @@
-const APP_VERSION = "v64";
+const APP_VERSION = "v65";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -328,8 +328,6 @@ function compute() {
       expected: null,
       actual: null,
       vs: null,
-      mins0: null,
-      mins1: null,
       u0: null,
       u1: null,
     };
@@ -343,16 +341,6 @@ function compute() {
       ? ((actual - expected) / expected) * 100
       : null;
   const priced = it.dollars !== false;
-  const wage0 = atMonth(seriesOf("wage_hourly"), state.thenYear, state.thenMonth);
-  const wage1 = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
-  const earn = it.typed ? from : null;
-  const mins0 = priced && from != null && wage0 ? ((earn != null ? earn : from) / wage0) * 60 : null;
-  const mins1 = !priced || !wage1
-    ? null
-    : earn != null
-      ? (earn / wage1) * 60
-      : (actual != null ? (actual / wage1) * 60 : null) ??
-        (expected != null ? (expected / wage1) * 60 : null);
   let u0 = null;
   let u1 = null;
   if (yd.stick && priced) {
@@ -362,7 +350,7 @@ function compute() {
     if (from != null && px0) u0 = from / px0;
     if (nowDollars != null && px1) u1 = nowDollars / px1;
   }
-  return { it, yd, from, ratio, expected, actual, vs, mins0, mins1, u0, u1 };
+  return { it, yd, from, ratio, expected, actual, vs, u0, u1 };
 }
 
 function fmtMeasure(n) {
@@ -384,13 +372,6 @@ function fmtMeasure(n) {
       maximumFractionDigits: d,
     })
   );
-}
-
-function fmtMins(m) {
-  if (m == null || !isFinite(m)) return "—";
-  if (m >= 120) return (m / 60).toFixed(1) + " hr";
-  if (m < 10) return (Math.round(m * 10) / 10).toFixed(1) + " min";
-  return Math.round(m) + " min";
 }
 
 function setHeroUnit(id, unit) {
@@ -849,33 +830,6 @@ function plainLine(c, note) {
   return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + yardSpan + ", which pointed to " + exp + ".";
 }
 
-function renderWork(c) {
-  const work = $("work");
-  if (c.it.dollars !== false && c.mins0 != null) {
-    const thenFactory = state.thenYear < 1964;
-    const nowFactory = state.nowYear < 1964;
-    const kind = thenFactory && nowFactory
-      ? "factory pay"
-      : !thenFactory && !nowFactory
-        ? "production wage"
-        : "factory pay then, production wage now";
-    work.hidden = false;
-    const earnWhat = c.it.typed ? " to earn " + fmtPlain(c.from, true) : "";
-    work.textContent =
-      "Work time" +
-      earnWhat +
-      ", " +
-      kind +
-      ": " +
-      fmtMins(c.mins0) +
-      " then → " +
-      fmtMins(c.mins1) +
-      " now";
-  } else {
-    work.hidden = true;
-  }
-}
-
 function amountOptions() {
   const opts = [{ id: 1, label: "$1" }];
   for (let n = 10; n <= 5000; n += 10) {
@@ -1259,7 +1213,6 @@ function renderAll() {
   renderHero(c);
   renderWage();
   renderCounter();
-  renderWork(c);
   renderChart();
   syncAmountDial();
   sizeDrums();
