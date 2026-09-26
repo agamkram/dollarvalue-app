@@ -8,6 +8,7 @@
   --muted: #8b97a8;
   --gold: #e6c15a;
   --gold-dim: rgba(230, 193, 90, 0.16);
+  --blue: #6cb2f2;
   --green: #3d9a6a;
   --red: #d45b5b;
   --accent: #e6c15a;
@@ -26,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 62;
+  --dv-css: 63;
 }
 
 *,
@@ -560,6 +561,14 @@ html.pwa-standalone .dials {
   color: var(--gold);
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+#drumItem .drum-list li.is-on {
+  color: var(--blue);
+}
+
+#drumItem.is-yard .drum-list li.is-on {
+  color: var(--gold);
 }
 
 .drum-list li.is-dead {

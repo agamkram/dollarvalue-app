@@ -1,4 +1,4 @@
-const APP_VERSION = "v62";
+const APP_VERSION = "v63";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -1059,11 +1059,19 @@ function chartLabel(id, name) {
 
 function chartRole(id) {
   if (id === state.yard) return "yard";
+  if (id === state.item) return "item";
   if (id === "debt_person") return "debt";
   if (id === "wage_hourly") return "wage";
   if (id === "tax_person") return "tax";
-  if (id === state.item) return "item";
   return "";
+}
+
+function roleStroke(role) {
+  if (role === "yard") return "var(--gold)";
+  if (role === "item") return "var(--blue)";
+  if (role === "debt") return "var(--red)";
+  if (role) return "var(--text)";
+  return "var(--muted)";
 }
 
 function drawChart(plot, lines) {
@@ -1173,7 +1181,16 @@ function drawChart(plot, lines) {
   svg.appendChild(x1);
 
   const drawn = [];
-  const ordered = lines.slice().sort((a, b) => (chartRole(a.id) ? 1 : 0) - (chartRole(b.id) ? 1 : 0));
+  const ordered = lines.slice().sort((a, b) => {
+    const rank = (id) => {
+      const role = chartRole(id);
+      if (role === "item") return 3;
+      if (role === "yard") return 2;
+      if (role) return 1;
+      return 0;
+    };
+    return rank(a.id) - rank(b.id);
+  });
   ordered.forEach((line) => {
     const role = chartRole(line.id);
     const segs = [];
@@ -1202,8 +1219,8 @@ function drawChart(plot, lines) {
     const path = svgEl("path", {
       d: d,
       fill: "none",
-      stroke: role === "yard" ? "var(--gold)" : role === "debt" ? "var(--red)" : role ? "var(--text)" : "var(--muted)",
-      "stroke-width": role === "yard" || role === "debt" ? "1.7" : role ? "1.35" : "1",
+      stroke: roleStroke(role),
+      "stroke-width": role === "yard" || role === "item" || role === "debt" ? "1.8" : role ? "1.35" : "1",
       "stroke-opacity": role ? "1" : "0.4",
       "stroke-linejoin": "round",
       "stroke-linecap": "round",
@@ -1259,7 +1276,7 @@ function drawChart(plot, lines) {
       x: String(padL + plotW + 6),
       y: d.y.toFixed(1),
       "dominant-baseline": "middle",
-      fill: d.role === "yard" ? "var(--gold)" : d.role === "debt" ? "var(--red)" : d.role ? "var(--text)" : "var(--muted)",
+      fill: roleStroke(d.role),
       "font-size": "10",
     });
     text.textContent = chartLabel(d.id, d.name);
@@ -1284,8 +1301,15 @@ function renderChart() {
   else requestAnimationFrame(() => drawChart(plot, chartLines));
 }
 
+function syncItemDrum() {
+  const drum = $("drumItem");
+  if (!drum) return;
+  drum.classList.toggle("is-yard", state.item === state.yard);
+}
+
 function renderAll() {
   syncMonthWheels();
+  syncItemDrum();
   const c = compute();
   renderHero(c);
   renderWage();
