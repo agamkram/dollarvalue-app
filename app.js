@@ -1,4 +1,4 @@
-const APP_VERSION = "v61";
+const APP_VERSION = "v62";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -393,13 +393,6 @@ function fmtMins(m) {
   return Math.round(m) + " min";
 }
 
-function fmtHours(h) {
-  if (h == null || !isFinite(h)) return "—";
-  if (h >= 100) return Math.round(h).toLocaleString("en-US") + " hr";
-  if (h >= 10) return Math.round(h) + " hr";
-  return (Math.round(h * 10) / 10).toFixed(1) + " hr";
-}
-
 function setHeroUnit(id, unit) {
   const el = $(id);
   if (!unit) {
@@ -660,24 +653,15 @@ function renderWage() {
   setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", "Wage · " + wageCap(state.nowYear, state.nowMonth));
 }
 
-function hoursAt(share) {
-  if (!share) return null;
-  const w = personYear("wage_hourly", share.y);
-  if (!w || !w.v) return null;
-  return { y: share.y, text: fmtHours(share.v / w.v) };
-}
-
 function renderCounter() {
   const row = $("counter");
   const line = $("counterPlain");
   const d0 = personYear("debt_person", state.thenYear);
   const d1 = personYear("debt_person", state.nowYear);
   const samePrint = d0 && d1 && d0.y === d1.y && state.thenYear === state.nowYear;
-  const hours = $("burdenHours");
   if (!row || !d0 || !d1 || samePrint) {
     if (row) row.hidden = true;
     if (line) line.hidden = true;
-    if (hours) hours.hidden = true;
     return;
   }
   const debtSame = d0.y === d1.y;
@@ -695,7 +679,6 @@ function renderCounter() {
   if (ratio == null) {
     if (row) row.hidden = true;
     if (line) line.hidden = true;
-    if (hours) hours.hidden = true;
     return;
   }
   row.hidden = false;
@@ -705,28 +688,6 @@ function renderCounter() {
   setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(d0.v), "", "Debt · " + d0.y);
   setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(expected), "", dollars);
   setHeroBay("debtActualSide", "debtActual", "debtActualUnit", "debtCheck", money(d1.v), "", "Debt · " + d1.y);
-  const dh0 = hoursAt(d0);
-  const dh1 = hoursAt(d1);
-  const t0h = hoursAt(t0);
-  const t1h = hoursAt(t1);
-  if (hours) {
-    if (dh0 && dh1) {
-      hours.hidden = false;
-      const sameH = (a, b) => a.y === b.y && a.text === b.text;
-      const debtH = sameH(dh0, dh1)
-        ? "debt still " + dh0.text + " in " + dh0.y
-        : "debt " + dh0.text + " in " + dh0.y + ", " + dh1.text + " in " + dh1.y;
-      const taxH =
-        t0h && t1h
-          ? sameH(t0h, t1h)
-            ? " Tax still " + t0h.text + " in " + t0h.y + "."
-            : " Tax " + t0h.text + " in " + t0h.y + ", " + t1h.text + " in " + t1h.y + "."
-          : "";
-      hours.textContent = "In hours of that wage: " + debtH + "." + taxH;
-    } else {
-      hours.hidden = true;
-    }
-  }
   let tax = "";
   if (t0 && t1) {
     const taxSame = t0.y === t1.y;
@@ -1311,7 +1272,6 @@ function drawChart(plot, lines) {
 function renderChart() {
   const host = $("chart");
   const plot = $("chartPlot");
-  const cap = $("chartCap");
   if (!host || !plot) return;
   chartLines = collectChartLines();
   if (chartLines.length < 2) {
@@ -1320,7 +1280,6 @@ function renderChart() {
     return;
   }
   host.hidden = false;
-  cap.textContent = "Each line starts at 1. Log scale.";
   if (plot.clientWidth > 40 && plot.clientHeight > 40) drawChart(plot, chartLines);
   else requestAnimationFrame(() => drawChart(plot, chartLines));
 }
