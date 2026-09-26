@@ -40,8 +40,6 @@ FRED_SERIES = [
     ("m2", "M2SL", "M2", "money", "Fed via FRED"),
     ("m1", "M1SL", "M1", "money", "Fed via FRED"),
     ("base", "BOGMBASE", "Monetary base", "money", "Fed via FRED"),
-    ("dxy", "DTWEXBGS", "Broad dollar", "numeraire", "Fed via FRED"),
-    ("dxy_old", "TWEXBMTH", "Broad dollar (goods only)", "numeraire", "Fed via FRED"),
     ("wti", "WTISPLC", "WTI oil", "commodity", "FRED"),
     ("wheat", "PWHEAMTUSDM", "Wheat", "commodity", "IMF via FRED"),
     ("corn", "PMAIZMTUSDM", "Corn", "commodity", "IMF via FRED"),
@@ -544,29 +542,107 @@ def splice_income(series: dict, raw: dict, census: list[tuple[int, float]]) -> N
     print("  income %s–%s fred from %s" % (packed["years"][0], packed["years"][-1], fred_year))
 
 
-def splice_dollar(series: dict, raw: dict) -> None:
-    old = raw.get("dxy_old") or []
-    new = raw.get("dxy") or []
-    jan_old = [v for d, v in old if d.startswith("2006-01")]
-    jan_new = [v for d, v in new if d.startswith("2006-01")]
-    if not jan_old or not jan_new:
-        raise RuntimeError("broad dollar has no January 2006 overlap")
-    scale = (sum(jan_new) / len(jan_new)) / (sum(jan_old) / len(jan_old))
-    merged = [(d, v * scale) for d, v in old if d < "2006-01-01"]
-    merged += [pair for pair in new if pair[0] >= "2006-01-01"]
-    packed = pack_obs(merged)
-    series["dxy"] = {
-        "id": "dxy",
-        "name": "Broad dollar",
-        "kind": "numeraire",
-        "source": "Fed goods-only broad index before 2006, goods and services after",
-        "fred": "DTWEXBGS",
-        **packed,
-    }
-    series.pop("dxy_old", None)
+def measuringworth_wage() -> list[tuple[int, float]]:
+    """Officer's hourly compensation of factory production workers, 1790–."""
+    print("MeasuringWorth wage…")
+    url = "https://www.measuringworth.com/datasets/uswage/result.php"
+    data = urllib.parse.urlencode(
+        [("use[]", "MANCOMP"), ("year_source", "1790"), ("year_result", str(date.today().year))]
+    ).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"User-Agent": UA, "Referer": "https://www.measuringworth.com/uswage/"},
+    )
+    html = urllib.request.urlopen(req, context=CTX, timeout=90).read().decode("utf-8", "replace")
+    found = re.findall(r"<tr><td>(\d{4})</td><td>([\d.]+)</td></tr>", html)
+    rows = [(int(y), float(v)) for y, v in found]
+    if not rows or rows[0][0] != 1790:
+        raise RuntimeError("measuringworth wage starts %s" % (rows[:1],))
+    print("  %s–%s n=%d" % (rows[0][0], rows[-1][0], len(rows)))
+    return rows
+
+
+def splice_wage(series: dict, raw: dict, early: list[tuple[int, float]]) -> None:
+    """BLS production wage from 1964. Before that, factory compensation scaled
+    so 1964 meets the BLS average."""
+    fred = list(raw.get("wage_hourly") or [])
+    if not fred:
+        raise RuntimeError("no FRED wage")
+    fred_year = int(fred[0][0][:4])
+    base = [v for d, v in fred if d.startswith("%d-" % fred_year)]
+    anchor = next((v for y, v in early if y == fred_year), None)
+    if not base or not anchor:
+        raise RuntimeError("wage splice missing %s" % fred_year)
+    scale = (sum(base) / len(base)) / anchor
+    if not (0.7 <= scale <= 1.1):
+        raise RuntimeError("wage scale %.3f" % scale)
+    packed = pack_obs(fred)
+    years = [y for y, _ in early if y < fred_year]
+    annual = [round(v * scale, 6) for y, v in early if y < fred_year]
+    if years[-1] != fred_year - 1:
+        raise RuntimeError("wage gap before %s" % fred_year)
+    packed["years"] = years + packed["years"]
+    packed["annual"] = annual + packed["annual"]
+    prev = series["wage_hourly"]
+    prev.update(packed)
+    prev["source"] = (
+        "MeasuringWorth factory production-worker compensation through %d, "
+        "scaled onto BLS total-private production wage from %d"
+        % (fred_year - 1, fred_year)
+    )
     print(
-        "  dxy %s–%s scale=%.4f"
-        % (packed["years"][0], packed["years"][-1], scale)
+        "  wage %s–%s scale=%.3f fred from %s"
+        % (packed["years"][0], packed["years"][-1], scale, fred_year)
+    )
+
+
+def build_person_burden(series: dict, key: str) -> None:
+    """One person's federal debt and federal taxes. Debt is billions of dollars,
+    receipts are millions, population is thousands. July population."""
+    debt = fred_obs(key, "FYGFDPUB")
+    tax = fred_obs(key, "FYFR")
+    pop = {int(d[:4]): v for d, v in fred_obs(key, "POPTHM") if d[5:7] == "07"}
+    if not (3000 < next(v for d, v in debt if d.startswith("2000")) < 5000):
+        raise RuntimeError("FYGFDPUB is no longer billions")
+    if not (1_000_000 < next(v for d, v in tax if d.startswith("2000")) < 3_000_000):
+        raise RuntimeError("FYFR is no longer millions")
+
+    def pack(pairs, sid, name, source, fred):
+        rows = []
+        for d, v in pairs:
+            y = int(d[:4])
+            if y not in pop or pop[y] <= 0:
+                continue
+            per = (v * 1_000_000 / pop[y]) if sid == "debt_person" else (v * 1_000 / pop[y])
+            rows.append((y, round(per, 2)))
+        if len(rows) < 20:
+            raise RuntimeError("%s n=%d" % (sid, len(rows)))
+        series[sid] = {
+            "id": sid,
+            "name": name,
+            "kind": "share",
+            "source": source,
+            "fred": fred,
+            "years": [y for y, _ in rows],
+            "annual": [v for _, v in rows],
+            "monthly": {},
+        }
+        print("  %s %s–%s" % (sid, rows[0][0], rows[-1][0]))
+
+    pack(
+        debt,
+        "debt_person",
+        "Federal debt per person",
+        "Debt held by the public divided by the July population",
+        "FYGFDPUB",
+    )
+    pack(
+        tax,
+        "tax_person",
+        "Federal taxes per person",
+        "Federal receipts divided by the July population",
+        "FYFR",
     )
 
 
@@ -585,7 +661,7 @@ def main() -> None:
             if len(obs) < 8:
                 print("  skip %s (%s) n=%d" % (sid, fred, len(obs)))
                 continue
-            if sid in ("bitcoin", "stocks", "dxy", "dxy_old", "djia", "wheat", "corn", "income_hh"):
+            if sid in ("bitcoin", "stocks", "djia", "wheat", "corn", "income_hh", "wage_hourly"):
                 raw[sid] = obs
             packed = pack_obs(obs)
             series[sid] = {
@@ -624,6 +700,7 @@ def main() -> None:
     splice_pink_front(series, raw, metals, "wheat", "Wheat, US HRW")
     splice_pink_front(series, raw, metals, "corn", "Maize")
     splice_income(series, raw, census_income())
+    splice_wage(series, raw, measuringworth_wage())
     gspan = series["gold"]["years"]
     sspan = series["silver_spot"]["years"]
     print("  gold %s–%s" % (gspan[0], gspan[-1]))
@@ -631,7 +708,7 @@ def main() -> None:
     splice_bitcoin(series, raw, bitstamp_btc())
     splice_sp(series, raw, shiller_sp())
     splice_dow(series, raw, measuringworth_dow())
-    splice_dollar(series, raw)
+    build_person_burden(series, key)
 
     # One CPI yardstick: Minneapolis 1800–1912 scaled onto BLS 1913–now.
     if "cpi_u" in series and "cpi_mpls" in series:
@@ -659,9 +736,9 @@ def main() -> None:
     else:
         raise SystemExit("cpi splice missing cpi_u or cpi_mpls; series.json not written")
 
-    for drop in ("cpi_u", "cpi_mpls", "dxy_old", "gold_official", "gold_spot", "wage_ssa"):
+    for drop in ("cpi_u", "cpi_mpls", "gold_official", "gold_spot", "wage_ssa"):
         series.pop(drop, None)
-    need = ("cpi", "gold", "silver_spot", "bitcoin", "stocks", "dxy")
+    need = ("cpi", "gold", "silver_spot", "bitcoin", "stocks")
     missing = [k for k in need if k not in series]
     if missing:
         raise SystemExit("missing %s; series.json not written" % ", ".join(missing))

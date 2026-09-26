@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dollarvalue.markmaga.com/sitemap.xml
+Sitemap: https://dollarvalue-app.vercel.app/sitemap.xml

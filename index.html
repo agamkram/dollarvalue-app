@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v50";
+        var EXPECTED = "v56";
         window.__DV_EXPECTED = EXPECTED;
       } catch (e) {}
     })();
@@ -92,16 +92,16 @@
     property="og:description"
     content="What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI."
   />
-  <meta property="og:url" content="https://dollarvalue.markmaga.com/" />
-  <link rel="canonical" href="https://dollarvalue.markmaga.com/" />
-  <meta property="og:image" content="https://dollarvalue.markmaga.com/icon-512.png" />
+  <meta property="og:url" content="https://dollarvalue-app.vercel.app/" />
+  <link rel="canonical" href="https://dollarvalue-app.vercel.app/" />
+  <meta property="og:image" content="https://dollarvalue-app.vercel.app/icon-512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="DollarValue" />
   <meta
     name="twitter:description"
     content="What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI."
   />
-  <meta name="twitter:image" content="https://dollarvalue.markmaga.com/icon-512.png" />
+  <meta name="twitter:image" content="https://dollarvalue-app.vercel.app/icon-512.png" />
   <title>DollarValue — several worths, not just CPI | Mark Maga</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
@@ -113,7 +113,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=50" />
+  <link rel="stylesheet" href="styles.css?v=56" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -121,7 +121,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v50</span>
+        <span class="ver" id="verBadge" title="Build">v56</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -145,6 +145,44 @@
     </section>
     <p class="hero-measure" id="heroMeasure" hidden></p>
     <p class="plain" id="plain" aria-live="polite"></p>
+
+    <section class="hero hero-counter" id="wageRow" hidden aria-label="Hourly wage">
+      <div class="hero-side" id="wageFromSide">
+        <p class="hero-amt" id="wageFrom"></p>
+        <p class="hero-unit" id="wageFromUnit" hidden></p>
+        <p class="hero-cap" id="wageFromCap"></p>
+      </div>
+      <div class="hero-side" id="wageToSide">
+        <p class="hero-amt hero-amt-now" id="wageTo"></p>
+        <p class="hero-unit" id="wageToUnit" hidden></p>
+        <p class="hero-cap" id="wageBy"></p>
+      </div>
+      <div class="hero-side" id="wageActualSide">
+        <p class="hero-amt" id="wageActual"></p>
+        <p class="hero-unit" id="wageActualUnit" hidden></p>
+        <p class="hero-cap" id="wageCheck"></p>
+      </div>
+    </section>
+
+    <section class="hero hero-counter" id="counter" hidden aria-label="One person's federal debt">
+      <div class="hero-side" id="debtFromSide">
+        <p class="hero-amt" id="debtFrom"></p>
+        <p class="hero-unit" id="debtFromUnit" hidden></p>
+        <p class="hero-cap" id="debtFromCap"></p>
+      </div>
+      <div class="hero-side" id="debtToSide">
+        <p class="hero-amt hero-amt-now" id="debtTo"></p>
+        <p class="hero-unit" id="debtToUnit" hidden></p>
+        <p class="hero-cap" id="debtBy"></p>
+      </div>
+      <div class="hero-side" id="debtActualSide">
+        <p class="hero-amt" id="debtActual"></p>
+        <p class="hero-unit" id="debtActualUnit" hidden></p>
+        <p class="hero-cap" id="debtCheck"></p>
+      </div>
+    </section>
+    <p class="plain plain-counter" id="counterPlain" hidden></p>
+    <p class="work" id="burdenHours" hidden></p>
 
     <section class="scan" aria-label="Other items versus this measure">
       <p class="scan-cap" id="heatCap"></p>
@@ -189,7 +227,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=50" defer></script>
+  <script src="app.js?v=56" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>

@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 50;
+  --dv-css: 56;
 }
 
 *,
@@ -104,10 +104,10 @@ html.pwa-standalone .fit-stage {
   max-width: none;
   margin: 0;
   overflow: hidden;
-  padding: 2px 6px 6px;
+  padding: 2px 4px 4px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .topbar {
@@ -177,10 +177,14 @@ html.pwa-standalone .fit-stage {
   }
 }
 
+.hero[hidden] {
+  display: none !important;
+}
+
 .hero {
   flex-shrink: 0;
   height: auto;
-  min-height: 78px;
+  min-height: 68px;
   box-sizing: border-box;
   display: flex;
   gap: 3px;
@@ -199,7 +203,7 @@ html.pwa-standalone .fit-stage {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px 4px 5px;
+  padding: 4px 3px 3px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -280,25 +284,43 @@ html.pwa-standalone .fit-stage {
   display: none !important;
 }
 
+.hero-counter {
+  min-height: 52px;
+}
+
+.hero-counter .hero-amt {
+  font-size: 1.7rem;
+}
+
 .plain {
   flex-shrink: 0;
   margin: 0;
   padding: 0 2px;
-  max-height: 6.8em;
+  max-height: 5.6em;
   overflow: hidden;
   font-size: 0.78rem;
   line-height: 1.35;
   color: var(--text);
 }
 
+.plain-counter {
+  max-height: none;
+  overflow: visible;
+  color: var(--muted);
+}
+
+.plain[hidden] {
+  display: none !important;
+}
+
 .scan {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
-  margin-top: 2px;
-  padding-top: 6px;
+  margin-top: 0;
+  padding-top: 4px;
   border-top: 1px solid var(--line);
 }
 

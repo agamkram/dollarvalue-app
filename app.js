@@ -1,4 +1,4 @@
-const APP_VERSION = "v50";
+const APP_VERSION = "v56";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -44,7 +44,6 @@ const THINGS = [
   { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false, unit: "billion" },
   { id: "m1", name: "M1", series: "m1", kind: "money", dollars: false, unit: "billion" },
   { id: "base", name: "Monetary base", series: "base", kind: "money", dollars: false, unit: "billion" },
-  { id: "dxy", name: "Broad dollar", series: "dxy", kind: "numeraire", dollars: false },
   { id: "homes_msp", name: "Median home", series: "homes_msp", kind: "asset" },
   { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "index", dollars: false },
   { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "index", dollars: false },
@@ -150,8 +149,11 @@ function money(n, digits) {
 
 function pct(n) {
   if (n == null || !isFinite(n)) return "—";
-  const sign = n > 0 ? "+" : "";
-  return sign + n.toFixed(0) + "%";
+  const digits = Math.abs(n) >= 10 ? 0 : 1;
+  const rounded = Number(n.toFixed(digits));
+  if (rounded === 0) return "0%";
+  const sign = rounded > 0 ? "+" : "";
+  return sign + rounded.toFixed(digits) + "%";
 }
 
 function itemMeta() {
@@ -316,7 +318,7 @@ function compute() {
     };
   }
   const from = thenAmount();
-  const ratio = scale(yd.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+  const ratio = scale(yd.series || yd.id, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
   const expected = from != null && ratio != null ? from * ratio : null;
   const actual = nowActual();
   const vs =
@@ -326,16 +328,19 @@ function compute() {
   const priced = it.dollars !== false;
   const wage0 = atMonth(seriesOf("wage_hourly"), state.thenYear, state.thenMonth);
   const wage1 = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
-  const mins0 = priced && from != null && wage0 ? (from / wage0) * 60 : null;
-  const mins1 = priced
-    ? (actual != null && wage1 ? (actual / wage1) * 60 : null) ??
-      (expected != null && wage1 ? (expected / wage1) * 60 : null)
-    : null;
+  const earn = it.typed ? from : null;
+  const mins0 = priced && from != null && wage0 ? ((earn != null ? earn : from) / wage0) * 60 : null;
+  const mins1 = !priced || !wage1
+    ? null
+    : earn != null
+      ? (earn / wage1) * 60
+      : (actual != null ? (actual / wage1) * 60 : null) ??
+        (expected != null ? (expected / wage1) * 60 : null);
   let u0 = null;
   let u1 = null;
   if (yd.stick && priced) {
-    const px0 = atMonth(seriesOf(yd.id), state.thenYear, state.thenMonth);
-    const px1 = atMonth(seriesOf(yd.id), state.nowYear, state.nowMonth);
+    const px0 = atMonth(seriesOf(yd.series || yd.id), state.thenYear, state.thenMonth);
+    const px1 = atMonth(seriesOf(yd.series || yd.id), state.nowYear, state.nowMonth);
     const nowDollars = it.typed ? from : actual;
     if (from != null && px0) u0 = from / px0;
     if (nowDollars != null && px1) u1 = nowDollars / px1;
@@ -367,7 +372,15 @@ function fmtMeasure(n) {
 function fmtMins(m) {
   if (m == null || !isFinite(m)) return "—";
   if (m >= 120) return (m / 60).toFixed(1) + " hr";
+  if (m < 10) return (Math.round(m * 10) / 10).toFixed(1) + " min";
   return Math.round(m) + " min";
+}
+
+function fmtHours(h) {
+  if (h == null || !isFinite(h)) return "—";
+  if (h >= 100) return Math.round(h).toLocaleString("en-US") + " hr";
+  if (h >= 10) return Math.round(h) + " hr";
+  return (Math.round(h * 10) / 10).toFixed(1) + " hr";
 }
 
 function setHeroUnit(id, unit) {
@@ -381,14 +394,14 @@ function setHeroUnit(id, unit) {
   el.textContent = unit.replace(/^\//, "");
 }
 
-function fitHeroAmt(el, side) {
+function fitHeroAmt(el, side, maxPx) {
   if (!el || !side || side.classList.contains("is-empty") || !el.textContent) {
     if (el) el.style.fontSize = "";
     return;
   }
   const room = side.clientWidth - 8;
   if (room <= 0) return;
-  const max = 40.8;
+  const max = maxPx || 40.8;
   const min = 11;
   el.style.fontSize = max + "px";
   if (el.scrollWidth <= room) return;
@@ -405,12 +418,18 @@ function fitHeroAmt(el, side) {
 
 function fitHeroAmts() {
   const pairs = [
-    ["heroFromSide", "heroFrom"],
-    ["heroToSide", "heroTo"],
-    ["heroActualSide", "heroActual"],
+    ["heroFromSide", "heroFrom", 40.8],
+    ["heroToSide", "heroTo", 40.8],
+    ["heroActualSide", "heroActual", 40.8],
+    ["wageFromSide", "wageFrom", 26],
+    ["wageToSide", "wageTo", 26],
+    ["wageActualSide", "wageActual", 26],
+    ["debtFromSide", "debtFrom", 26],
+    ["debtToSide", "debtTo", 26],
+    ["debtActualSide", "debtActual", 26],
   ];
-  for (const [sideId, amtId] of pairs) {
-    fitHeroAmt($(amtId), $(sideId));
+  for (const [sideId, amtId, maxPx] of pairs) {
+    fitHeroAmt($(amtId), $(sideId), maxPx);
   }
 }
 
@@ -458,10 +477,10 @@ function renderHero(c) {
     "heroBy",
     c.expected == null ? "—" : fmtPlain(c.expected, c.it.dollars),
     unit,
-    c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.id))
+    c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.series || c.yd.id))
   );
 
-  const yardSer = seriesOf(c.yd.id);
+  const yardSer = seriesOf(c.yd.series || c.yd.id);
   const m1Cross = crossesM1Break(
     state.thenYear,
     state.thenMonth,
@@ -470,12 +489,8 @@ function renderHero(c) {
   );
   const m1Note =
     (c.yd.id === "m1" || isM1(c.it)) && m1Cross ? "M1 redefined May 2020" : "";
-  const dxyNote =
-    c.yd.id === "dxy" && (state.thenYear < 2006 || state.nowYear < 2006)
-      ? "Broad dollar is goods only before 2006"
-      : "";
   const note =
-    m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name) || dxyNote;
+    m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
   const measure = $("heroMeasure");
   if (note) {
     measure.hidden = false;
@@ -526,7 +541,6 @@ function yardRole(yd) {
   if (yd.id === "gdp_per_capita") return "avginc";
   if (yd.id === "gdp") return "economy";
   if (yd.id === "wage_hourly") return "wage";
-  if (yd.id === "dxy") return "dollar";
   if (yd.id === "m1" || yd.id === "m2" || yd.id === "base") return "money";
   if (yd.stick) return "stick";
   if (yd.id === "homes_msp") return "home";
@@ -542,25 +556,178 @@ function lagWords(vs) {
 }
 
 function plainWhen(year, month, ser) {
-  return whenLabel(year, month, ser)
-    .replace(/ avg$/, "")
-    .replace(/ YTD$/, ", so far")
-    .replace(/ partial$/, ", a partial year");
+  const label = whenLabel(year, month, ser);
+  if (label.endsWith(" avg")) return label.slice(0, -4);
+  if (label.endsWith(" YTD")) return label.slice(0, -4) + " so far";
+  if (label.endsWith(" partial")) return "partial " + label.slice(0, -8);
+  return label;
+}
+
+function seriesPace(id) {
+  const a = atMonth(seriesOf(id), state.thenYear, state.thenMonth);
+  const b = atMonth(seriesOf(id), state.nowYear, state.nowMonth);
+  if (a == null || b == null || a === 0) return null;
+  return pace(((b - a) / a) * 100);
+}
+
+function priceWagePair() {
+  const prices = seriesPace("cpi");
+  const wage = seriesPace("wage_hourly");
+  if (!prices || !wage) return "";
+  return " Prices " + prices.text + ". Wage " + wage.text + ".";
+}
+
+function personYear(id, year) {
+  const ser = seriesOf(id);
+  if (!ser || !ser.years || !ser.years.length || year < ser.years[0]) return null;
+  const y = Math.min(year, ser.years[ser.years.length - 1]);
+  const v = atYear(ser, y);
+  if (v == null) return null;
+  return { y: y, v: v };
+}
+
+function dollarLabel() {
+  const when = state.nowMonth
+    ? MONTHS[state.nowMonth].label + " " + state.nowYear
+    : String(state.nowYear);
+  return (state.yard === "cpi" ? "" : "CPI, ") + when + " dollars";
+}
+
+function renderWage() {
+  const row = $("wageRow");
+  const hide = () => {
+    if (row) row.hidden = true;
+  };
+  if (!row || state.item === "wage_hourly" || state.yard === "wage_hourly") {
+    hide();
+    return;
+  }
+  const w0 = atMonth(seriesOf("wage_hourly"), state.thenYear, state.thenMonth);
+  const w1 = atMonth(seriesOf("wage_hourly"), state.nowYear, state.nowMonth);
+  const ratio = scale(state.yard, state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+  if (w0 == null || w1 == null || ratio == null) {
+    hide();
+    return;
+  }
+  const ser = seriesOf("wage_hourly");
+  const yardSer = seriesOf(state.yard);
+  const mid =
+    state.yard === "cpi"
+      ? dollarLabel()
+      : yardMeta().name + " · " + whenLabel(state.nowYear, state.nowMonth, yardSer);
+  row.hidden = false;
+  const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
+  setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Wage · " + wageCap(state.thenYear, state.thenMonth));
+  setHeroBay("wageToSide", "wageTo", "wageToUnit", "wageBy", money(w0 * ratio), "", mid);
+  setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", "Wage · " + wageCap(state.nowYear, state.nowMonth));
+}
+
+function hoursAt(share) {
+  if (!share) return null;
+  const w = personYear("wage_hourly", share.y);
+  if (!w || !w.v) return null;
+  return { y: share.y, text: fmtHours(share.v / w.v) };
+}
+
+function renderCounter() {
+  const row = $("counter");
+  const line = $("counterPlain");
+  const d0 = personYear("debt_person", state.thenYear);
+  const d1 = personYear("debt_person", state.nowYear);
+  const ratio = scale("cpi", state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+  const samePrint = d0 && d1 && d0.y === d1.y && state.thenYear === state.nowYear;
+  const hours = $("burdenHours");
+  if (!row || !d0 || !d1 || ratio == null || samePrint) {
+    if (row) row.hidden = true;
+    if (line) line.hidden = true;
+    if (hours) hours.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  const expected = d0.v * ratio;
+  const dollars = dollarLabel();
+  const debtSame = d0.y === d1.y;
+  const t0 = personYear("tax_person", state.thenYear);
+  const t1 = personYear("tax_person", state.nowYear);
+  setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(d0.v), "", "Debt · " + d0.y);
+  setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(expected), "", dollars);
+  setHeroBay("debtActualSide", "debtActual", "debtActualUnit", "debtCheck", money(d1.v), "", "Debt · " + d1.y);
+  const dh0 = hoursAt(d0);
+  const dh1 = hoursAt(d1);
+  const t0h = hoursAt(t0);
+  const t1h = hoursAt(t1);
+  if (hours) {
+    if (dh0 && dh1) {
+      hours.hidden = false;
+      const taxH = t0h && t1h ? " Tax " + t0h.text + " in " + t0h.y + ", " + t1h.text + " in " + t1h.y + "." : "";
+      hours.textContent = "In hours of that wage: debt " + dh0.text + " in " + dh0.y + ", " + dh1.text + " in " + dh1.y + "." + taxH;
+    } else {
+      hours.hidden = true;
+    }
+  }
+  const tax =
+    t0 && t1
+      ? " Taxes per person were " +
+        money(t0.v) +
+        " in " +
+        t0.y +
+        ", or " +
+        money(t0.v * ratio) +
+        " in " +
+        dollars +
+        ". They are " +
+        (t0.y === t1.y ? "still " : "") +
+        money(t1.v) +
+        " in " +
+        t1.y +
+        "."
+      : "";
+  line.hidden = false;
+  line.textContent =
+    "One person's share of the federal debt was " +
+    money(d0.v) +
+    " in " +
+    d0.y +
+    ", or " +
+    money(expected) +
+    " in " +
+    dollars +
+    ". It is " +
+    (debtSame ? "still " : "") +
+    money(d1.v) +
+    " in " +
+    d1.y +
+    "." +
+    tax;
 }
 
 function plainLine(c, note) {
   const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
-  const yardSer = seriesOf(c.yd.id);
+  const yardSer = seriesOf(c.yd.series || c.yd.id);
   const thenSer = c.it.typed ? yardSer : itemSer;
   const thenL = plainWhen(state.thenYear, state.thenMonth, thenSer);
   const nowL = plainWhen(state.nowYear, state.nowMonth, thenSer);
+  const yardThen = plainWhen(state.thenYear, state.thenMonth, yardSer);
+  const yardNow = plainWhen(state.nowYear, state.nowMonth, yardSer);
+  const yardSpan =
+    yardThen === thenL && yardNow === nowL ? "" : " from " + yardThen + " to " + yardNow;
   if (c.expected == null) return note || "No comparison for these dates.";
   const exp = fmtPlain(c.expected, c.it.typed ? true : c.it.dollars);
   const y = c.yd.name;
   if (c.it.typed) {
     const amt = fmtPlain(c.from, true);
     if (c.yd.id === "cpi") {
-      return amt + " in " + thenL + " buys what " + exp + " buys in " + nowL + ", in everyday prices.";
+      return (
+        amt +
+        " in " +
+        thenL +
+        " buys what " +
+        exp +
+        " buys in " +
+        nowL +
+        ", in everyday prices." +
+        priceWagePair()
+      );
     }
     if (yardRole(c.yd) === "prices") {
       return amt + " in " + thenL + " has the buying power of " + exp + " in " + nowL + ", using " + y + ".";
@@ -583,9 +750,6 @@ function plainLine(c, note) {
     if (c.yd.stick) {
       return amt + " in " + thenL + " bought a certain amount of " + y.toLowerCase() + ". The same amount costs " + exp + " in " + nowL + ".";
     }
-    if (c.yd.id === "dxy") {
-      return amt + " in " + thenL + " is " + exp + " in " + nowL + " if it moved with the broad dollar. A stronger dollar makes this larger.";
-    }
     if (yardRole(c.yd) === "money") {
       return amt + " in " + thenL + " is " + exp + " in " + nowL + " if it grew with " + y + ".";
     }
@@ -606,30 +770,33 @@ function plainLine(c, note) {
   }
   if (c.it.id === "spend_hh" && (c.yd.id === "cpi" || yardRole(c.yd) === "prices")) {
     const extra = c.vs > 0.5 ? " The extra is stuff they bought." : c.vs < -0.5 ? " They bought less than prices alone suggest." : " Spending kept pace with prices.";
-    return "Households spent " + from + " in " + thenL + ". Prices alone would make that " + exp + " in " + nowL + ". They spend " + actual + "." + extra + lagWords(c.vs);
+    const pricesAlone = yardSpan
+      ? "Prices alone, from " + yardThen + " to " + yardNow + ", would make that " + exp + "."
+      : "Prices alone would make that " + exp + " in " + nowL + ".";
+    return "Households spent " + from + " in " + thenL + ". " + pricesAlone + " They spend " + actual + "." + extra + lagWords(c.vs);
   }
   const rose = c.actual > c.from;
   const fell = c.actual < c.from;
   const yardRose = c.ratio > 1;
   if (!rose && !fell && c.vs > 0.5) {
-    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " fell. Following it would have meant " + exp + "." + lagWords(c.vs);
+    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " fell. Following it" + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
   if (!rose && !fell && c.vs < -0.5) {
-    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " rose. Keeping up would have meant " + exp + "." + lagWords(c.vs);
+    return name + " was " + from + " in " + thenL + " and is still " + actual + " in " + nowL + ". " + y + " rose. Keeping up" + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
   if (rose && c.vs < -0.5 && yardRose) {
-    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " rose faster. Keeping up would have meant " + exp + "." + lagWords(c.vs);
+    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " rose faster. Keeping up" + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
   if (rose && c.vs > 0.5) {
-    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". It beat " + y + ". Just following " + y + " would have meant " + exp + "." + lagWords(c.vs);
+    return name + " rose, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". It beat " + y + ". Just following " + y + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
   if (fell && c.vs < -0.5) {
-    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " did better. Following it would have meant " + exp + "." + lagWords(c.vs);
+    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " did better. Following it" + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
   if (fell && c.vs > 0.5) {
-    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " fell further. Following it would have meant " + exp + "." + lagWords(c.vs);
+    return name + " fell, from " + from + " in " + thenL + " to " + actual + " in " + nowL + ". " + y + " fell further. Following it" + yardSpan + " would have meant " + exp + "." + lagWords(c.vs);
   }
-  return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + ", which pointed to " + exp + ".";
+  return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + yardSpan + ", which pointed to " + exp + ".";
 }
 
 function fillRank(row, label, items) {
@@ -692,7 +859,7 @@ function renderHeat(c) {
   if (c.it.dollars !== false && c.mins0 != null) {
     work.hidden = false;
     work.textContent =
-      "Work time, production wage since 1964: " +
+      "Work time, production wage: " +
       fmtMins(c.mins0) +
       " then → " +
       fmtMins(c.mins1) +
@@ -728,6 +895,8 @@ function syncAmountDial() {
 function renderAll() {
   const c = compute();
   renderHero(c);
+  renderWage();
+  renderCounter();
   renderHeat(c);
   syncAmountDial();
   sizeDrums();
