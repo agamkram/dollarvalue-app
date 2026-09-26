@@ -1,4 +1,4 @@
-const APP_VERSION = "v57";
+const APP_VERSION = "v58";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -257,18 +257,35 @@ function isM1(meta) {
   return !!meta && !meta.typed && (meta.series === "m1" || meta.id === "m1");
 }
 
-function spanYears() {
-  function pt(y, m) {
-    return y + ((m || 6) - 0.5) / 12;
-  }
+function periodCenter(year, month, ser) {
+  if (month) return year + (month - 0.5) / 12;
+  const filled = yearSlots(ser, year);
+  if (!filled) return year + 0.5;
+  const idx =
+    ser && ser.freq === "quarterly"
+      ? [0, 3, 6, 9]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  let sum = 0;
+  let n = 0;
+  filled.forEach((ok, k) => {
+    if (!ok) return;
+    sum += (idx[k] + 0.5) / 12;
+    n += 1;
+  });
+  if (!n) return year + 0.5;
+  return year + sum / n;
+}
+
+function spanYears(ser) {
   return Math.abs(
-    pt(state.nowYear, state.nowMonth) - pt(state.thenYear, state.thenMonth)
+    periodCenter(state.nowYear, state.nowMonth, ser) -
+      periodCenter(state.thenYear, state.thenMonth, ser)
   );
 }
 
-function pace(vs) {
+function pace(vs, ser) {
   if (vs == null || !isFinite(vs)) return null;
-  const years = spanYears();
+  const years = spanYears(ser || seriesOf(state.yard));
   if (years < 1) {
     return {
       text: pct(vs),
@@ -564,10 +581,11 @@ function plainWhen(year, month, ser) {
 }
 
 function seriesPace(id) {
-  const a = atMonth(seriesOf(id), state.thenYear, state.thenMonth);
-  const b = atMonth(seriesOf(id), state.nowYear, state.nowMonth);
+  const ser = seriesOf(id);
+  const a = atMonth(ser, state.thenYear, state.thenMonth);
+  const b = atMonth(ser, state.nowYear, state.nowMonth);
   if (a == null || b == null || a === 0) return null;
-  return pace(((b - a) / a) * 100);
+  return pace(((b - a) / a) * 100, ser);
 }
 
 function priceWagePair() {
@@ -586,11 +604,31 @@ function personYear(id, year) {
   return { y: y, v: v };
 }
 
-function dollarLabel() {
-  const when = state.nowMonth
-    ? MONTHS[state.nowMonth].label + " " + state.nowYear
-    : String(state.nowYear);
-  return (state.yard === "cpi" ? "" : "CPI, ") + when + " dollars";
+function priceYearLabel(year, month, ser) {
+  if (month) return MONTHS[month].label + " " + year;
+  const kind = yearKind(ser, year);
+  if (kind === "ytd") return year + " YTD";
+  if (kind === "partial") return year + " partial";
+  return String(year);
+}
+
+function dollarLabel(year, month) {
+  const ser = seriesOf("cpi");
+  const y = year == null ? state.nowYear : year;
+  const m = month == null ? state.nowMonth : month;
+  return (state.yard === "cpi" ? "" : "CPI, ") + priceYearLabel(y, m, ser) + " dollars";
+}
+
+function latestYear(id) {
+  const ser = seriesOf(id);
+  if (!ser || !ser.years || !ser.years.length) return null;
+  return ser.years[ser.years.length - 1];
+}
+
+function burdenWindow(printYear, wheelYear, wheelMonth) {
+  if (printYear == null) return null;
+  if (printYear === wheelYear) return { y: printYear, m: wheelMonth || 0 };
+  return { y: printYear, m: 0 };
 }
 
 function renderWage() {
@@ -634,10 +672,27 @@ function renderCounter() {
   const line = $("counterPlain");
   const d0 = personYear("debt_person", state.thenYear);
   const d1 = personYear("debt_person", state.nowYear);
-  const ratio = scale("cpi", state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
   const samePrint = d0 && d1 && d0.y === d1.y && state.thenYear === state.nowYear;
   const hours = $("burdenHours");
-  if (!row || !d0 || !d1 || ratio == null || samePrint) {
+  if (!row || !d0 || !d1 || samePrint) {
+    if (row) row.hidden = true;
+    if (line) line.hidden = true;
+    if (hours) hours.hidden = true;
+    return;
+  }
+  const debtSame = d0.y === d1.y;
+  let ratio;
+  let dollars;
+  if (debtSame) {
+    ratio = 1;
+    dollars = dollarLabel(d1.y, 0);
+  } else {
+    const a = burdenWindow(d0.y, state.thenYear, state.thenMonth);
+    const b = burdenWindow(d1.y, state.nowYear, state.nowMonth);
+    ratio = scale("cpi", a.y, a.m, b.y, b.m);
+    dollars = b ? dollarLabel(b.y, b.m) : "";
+  }
+  if (ratio == null) {
     if (row) row.hidden = true;
     if (line) line.hidden = true;
     if (hours) hours.hidden = true;
@@ -645,8 +700,6 @@ function renderCounter() {
   }
   row.hidden = false;
   const expected = d0.v * ratio;
-  const dollars = dollarLabel();
-  const debtSame = d0.y === d1.y;
   const t0 = personYear("tax_person", state.thenYear);
   const t1 = personYear("tax_person", state.nowYear);
   setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(d0.v), "", "Debt · " + d0.y);
@@ -674,23 +727,42 @@ function renderCounter() {
       hours.hidden = true;
     }
   }
-  const tax =
-    t0 && t1
-      ? " Taxes per person were " +
+  let tax = "";
+  if (t0 && t1) {
+    const taxSame = t0.y === t1.y;
+    let taxRatio;
+    let taxDollars;
+    if (taxSame) {
+      taxRatio = 1;
+      taxDollars = dollarLabel(t1.y, 0);
+    } else {
+      const ta = burdenWindow(t0.y, state.thenYear, state.thenMonth);
+      const tb = burdenWindow(t1.y, state.nowYear, state.nowMonth);
+      taxRatio = scale("cpi", ta.y, ta.m, tb.y, tb.m);
+      taxDollars = tb ? dollarLabel(tb.y, tb.m) : "";
+    }
+    if (taxRatio != null) {
+      const taxVerb = t1.y === latestYear("tax_person") ? "are" : "were";
+      tax =
+        " Taxes per person were " +
         money(t0.v) +
         " in " +
         t0.y +
         ", or " +
-        money(t0.v * ratio) +
+        money(t0.v * taxRatio) +
         " in " +
-        dollars +
-        ". They are " +
-        (t0.y === t1.y ? "still " : "") +
+        taxDollars +
+        ". They " +
+        taxVerb +
+        " " +
+        (taxSame ? "still " : "") +
         money(t1.v) +
         " in " +
         t1.y +
-        "."
-      : "";
+        ".";
+    }
+  }
+  const debtVerb = d1.y === latestYear("debt_person") ? "is" : "was";
   line.hidden = false;
   line.textContent =
     "One person's share of the federal debt was " +
@@ -701,7 +773,9 @@ function renderCounter() {
     money(expected) +
     " in " +
     dollars +
-    ". It is " +
+    ". It " +
+    debtVerb +
+    " " +
     (debtSame ? "still " : "") +
     money(d1.v) +
     " in " +
@@ -748,7 +822,7 @@ function plainLine(c, note) {
       return amt + " in " + thenL + " is the same share of a typical household’s income as " + exp + " in " + nowL + ".";
     }
     if (c.yd.id === "gdp_per_capita") {
-      return amt + " in " + thenL + " is the same share of average income as " + exp + " in " + nowL + ".";
+      return amt + " in " + thenL + " is the same share of GDP per person as " + exp + " in " + nowL + ".";
     }
     if (c.yd.id === "gdp") {
       return amt + " in " + thenL + " is the same share of the whole economy as " + exp + " in " + nowL + ".";
@@ -778,11 +852,17 @@ function plainLine(c, note) {
     return name + " is the measure, so " + from + " in " + thenL + " becomes " + actual + " in " + nowL + ".";
   }
   if (c.it.id === "spend_hh" && (c.yd.id === "cpi" || yardRole(c.yd) === "prices")) {
-    const extra = c.vs > 0.5 ? " The extra is stuff they bought." : c.vs < -0.5 ? " They bought less than prices alone suggest." : " Spending kept pace with prices.";
+    const extra =
+      c.vs > 0.5
+        ? " Spending outpaced prices."
+        : c.vs < -0.5
+          ? " Spending lagged prices."
+          : " Spending kept pace with prices.";
     const pricesAlone = yardSpan
       ? "Prices alone, from " + yardThen + " to " + yardNow + ", would make that " + exp + "."
       : "Prices alone would make that " + exp + " in " + nowL + ".";
-    return "Households spent " + from + " in " + thenL + ". " + pricesAlone + " They spend " + actual + "." + extra + lagWords(c.vs);
+    const spendVerb = state.nowYear < latestYear("spend_hh") ? "They spent " : "They spend ";
+    return "Households spent " + from + " in " + thenL + ". " + pricesAlone + " " + spendVerb + actual + "." + extra + lagWords(c.vs);
   }
   const rose = c.actual > c.from;
   const fell = c.actual < c.from;
@@ -874,8 +954,17 @@ function renderHeat(c) {
         ? "production wage"
         : "factory pay then, production wage now";
     work.hidden = false;
+    const earnWhat = c.it.typed ? " to earn " + fmtPlain(c.from, true) : "";
     work.textContent =
-      "Work time, " + kind + ": " + fmtMins(c.mins0) + " then → " + fmtMins(c.mins1) + " now";
+      "Work time" +
+      earnWhat +
+      ", " +
+      kind +
+      ": " +
+      fmtMins(c.mins0) +
+      " then → " +
+      fmtMins(c.mins1) +
+      " now";
   } else {
     work.hidden = true;
   }
