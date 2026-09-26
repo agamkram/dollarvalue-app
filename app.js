@@ -1,4 +1,4 @@
-const APP_VERSION = "v58";
+const APP_VERSION = "v61";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -993,6 +993,338 @@ function syncAmountDial() {
   }
 }
 
+function chartEnds() {
+  const ay = state.thenYear;
+  const am = state.thenMonth;
+  const by = state.nowYear;
+  const bm = state.nowMonth;
+  const flip = ay * 12 + am > by * 12 + bm;
+  const y0 = flip ? by : ay;
+  const m0 = flip ? bm : am;
+  const y1 = flip ? ay : by;
+  const m1 = flip ? am : bm;
+  const yearMode = !m0 && !m1;
+  let t0;
+  let t1;
+  if (yearMode) {
+    t0 = y0;
+    t1 = y1;
+  } else {
+    t0 = y0 + ((m0 || 1) - 0.5) / 12;
+    t1 = y1 + ((m1 || 12) - 0.5) / 12;
+  }
+  return { y0, m0, y1, m1, yearMode, t0, t1 };
+}
+
+function chartSamples(ends) {
+  const times = [];
+  if (ends.yearMode) {
+    for (let y = ends.y0; y <= ends.y1; y++) times.push({ y: y, m: 0, t: y });
+    return times;
+  }
+  let y = ends.y0;
+  let m = ends.m0 || 1;
+  const last = ends.y1 * 12 + (ends.m1 || 12);
+  while (y * 12 + m <= last) {
+    times.push({ y: y, m: m, t: y + (m - 0.5) / 12 });
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return times;
+}
+
+function chartPoints(ser, times) {
+  return times.map((tm) => {
+    const v = atMonth(ser, tm.y, tm.m);
+    if (!(v > 0)) return null;
+    return { t: tm.t, v: v };
+  });
+}
+
+let chartLines = [];
+
+function collectChartLines() {
+  const ends = chartEnds();
+  if (!(ends.t1 > ends.t0)) return [];
+  const times = chartSamples(ends);
+  if (times.length < 2) return [];
+  const metas = YARDS.map((y) => ({ id: y.series || y.id, name: y.name }));
+  metas.push({ id: "debt_person", name: "Debt" }, { id: "tax_person", name: "Tax" });
+  const seen = {};
+  const cross = crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
+  const lines = [];
+  metas.forEach((meta) => {
+    if (seen[meta.id]) return;
+    seen[meta.id] = true;
+    if (meta.id === "m1" && cross) return;
+    const ser = seriesOf(meta.id);
+    if (!ser) return;
+    const pts = chartPoints(ser, times);
+    if (!pts[0] || !(pts[0].v > 0)) return;
+    let n = 0;
+    pts.forEach((p) => {
+      if (p) n += 1;
+    });
+    if (n < 2) return;
+    lines.push({ id: meta.id, name: meta.name, pts: pts, base: pts[0].v });
+  });
+  return lines;
+}
+
+function svgEl(name, attrs) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k]));
+  return el;
+}
+
+function chartLabel(id, name) {
+  if (id === "wage_hourly") return "Wage";
+  if (id === "used_cars") return "Used cars";
+  if (id === "silver_spot") return "Silver";
+  if (id === "income_hh") return "Income";
+  if (id === "spend_hh") return "Spending";
+  if (id === "gdp_per_capita") return "GDP / person";
+  if (id === "gdp_deflator") return "Deflator";
+  if (id === "chained_cpi") return "Chained CPI";
+  if (id === "homes_msp") return "Home";
+  if (id === "homes_cs") return "Home CS";
+  if (id === "homes_fhfa") return "Home FHFA";
+  if (id === "monetary" || id === "base") return "Base";
+  return name;
+}
+
+function chartRole(id) {
+  if (id === state.yard) return "yard";
+  if (id === "debt_person") return "debt";
+  if (id === "wage_hourly") return "wage";
+  if (id === "tax_person") return "tax";
+  if (id === state.item) return "item";
+  return "";
+}
+
+function drawChart(plot, lines) {
+  const w = plot.clientWidth;
+  const h = plot.clientHeight;
+  if (w < 40 || h < 40) return;
+  const padL = 26;
+  const padR = 92;
+  const padT = 8;
+  const padB = 16;
+  const plotW = Math.max(10, w - padL - padR);
+  const plotH = Math.max(10, h - padT - padB);
+  const ends = chartEnds();
+  let lo = Infinity;
+  let hi = -Infinity;
+  lines.forEach((line) => {
+    line.pts.forEach((p) => {
+      if (!p) return;
+      const r = p.v / line.base;
+      if (r > 0) {
+        lo = Math.min(lo, r);
+        hi = Math.max(hi, r);
+      }
+    });
+  });
+  if (!(hi > 0) || !isFinite(lo)) return;
+  if (!(hi > lo)) {
+    lo = lo / 1.08;
+    hi = hi * 1.08;
+  }
+  const logLo = Math.log(lo);
+  const logHi = Math.log(hi);
+  const span = logHi - logLo || 1;
+  const logA = logLo - span * 0.08;
+  const logB = logHi + span * 0.08;
+
+  function xOf(t) {
+    return padL + ((t - ends.t0) / (ends.t1 - ends.t0)) * plotW;
+  }
+  function yOf(r) {
+    const u = (Math.log(r) - logA) / (logB - logA);
+    return padT + (1 - u) * plotH;
+  }
+
+  const svg = svgEl("svg", {
+    viewBox: "0 0 " + w + " " + h,
+    width: String(w),
+    height: String(h),
+    role: "img",
+    "aria-label": "Series indexed to 1 at the start, log scale",
+  });
+  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
+
+  const ticks = [1];
+  let pow = 2;
+  while (pow < hi * 1.05 && ticks.length < 6) {
+    ticks.push(pow);
+    pow *= 2;
+  }
+  pow = 0.5;
+  while (pow > lo * 0.95 && ticks.length < 8) {
+    ticks.push(pow);
+    pow /= 2;
+  }
+  ticks.sort((a, b) => a - b);
+  ticks.forEach((tick) => {
+    if (tick < Math.exp(logA) || tick > Math.exp(logB)) return;
+    const y = yOf(tick);
+    svg.appendChild(
+      svgEl("line", {
+        x1: String(padL),
+        x2: String(padL + plotW),
+        y1: y.toFixed(1),
+        y2: y.toFixed(1),
+        stroke: "var(--line)",
+        "stroke-width": tick === 1 ? "1" : "0.5",
+      })
+    );
+    const label = svgEl("text", {
+      x: String(padL - 4),
+      y: y.toFixed(1),
+      "text-anchor": "end",
+      "dominant-baseline": "middle",
+      fill: "var(--muted)",
+      "font-size": "9",
+    });
+    label.textContent = tick < 1 ? String(tick) : String(Math.round(tick));
+    svg.appendChild(label);
+  });
+
+  const x0 = svgEl("text", {
+    x: String(padL),
+    y: String(h - 3),
+    fill: "var(--muted)",
+    "font-size": "9",
+  });
+  x0.textContent = ends.yearMode ? String(ends.y0) : whenLabel(ends.y0, ends.m0 || 1, null);
+  svg.appendChild(x0);
+  const x1 = svgEl("text", {
+    x: String(padL + plotW),
+    y: String(h - 3),
+    "text-anchor": "end",
+    fill: "var(--muted)",
+    "font-size": "9",
+  });
+  x1.textContent = ends.yearMode ? String(ends.y1) : whenLabel(ends.y1, ends.m1 || 12, null);
+  svg.appendChild(x1);
+
+  const drawn = [];
+  const ordered = lines.slice().sort((a, b) => (chartRole(a.id) ? 1 : 0) - (chartRole(b.id) ? 1 : 0));
+  ordered.forEach((line) => {
+    const role = chartRole(line.id);
+    const segs = [];
+    let cur = [];
+    line.pts.forEach((p) => {
+      if (!p) {
+        if (cur.length) segs.push(cur);
+        cur = [];
+        return;
+      }
+      cur.push(p);
+    });
+    if (cur.length) segs.push(cur);
+    const d = segs
+      .filter((seg) => seg.length >= 2)
+      .map((seg) =>
+        seg
+          .map((p, i) => {
+            const cmd = i === 0 ? "M" : "L";
+            return cmd + xOf(p.t).toFixed(1) + " " + yOf(p.v / line.base).toFixed(1);
+          })
+          .join(" ")
+      )
+      .join(" ");
+    if (!d) return;
+    const path = svgEl("path", {
+      d: d,
+      fill: "none",
+      stroke: role === "yard" ? "var(--gold)" : role === "debt" ? "var(--red)" : role ? "var(--text)" : "var(--muted)",
+      "stroke-width": role === "yard" || role === "debt" ? "1.7" : role ? "1.35" : "1",
+      "stroke-opacity": role ? "1" : "0.4",
+      "stroke-linejoin": "round",
+      "stroke-linecap": "round",
+    });
+    if (role === "tax") path.setAttribute("stroke-dasharray", "3 2");
+    const title = svgEl("title", {});
+    title.textContent = line.name;
+    path.appendChild(title);
+    svg.appendChild(path);
+    const last = line.pts.filter(Boolean).pop();
+    drawn.push({
+      id: line.id,
+      name: line.name,
+      role: role,
+      y: yOf(last.v / line.base),
+      x: xOf(last.t),
+      end: last.v / line.base,
+    });
+  });
+
+  let labeled = drawn.filter((d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "tax" || d.role === "item");
+  const byEnd = drawn.slice().sort((a, b) => b.end - a.end);
+  if (byEnd.length) labeled.push(byEnd[0], byEnd[byEnd.length - 1]);
+  const seenLab = {};
+  labeled = labeled.filter((d) => {
+    if (seenLab[d.id]) return false;
+    seenLab[d.id] = true;
+    return true;
+  });
+  labeled.sort((a, b) => a.y - b.y);
+  const gap = 11;
+  for (let i = 1; i < labeled.length; i++) {
+    if (labeled[i].y < labeled[i - 1].y + gap) labeled[i].y = labeled[i - 1].y + gap;
+  }
+  if (labeled.length) {
+    const top = padT;
+    const bot = padT + plotH;
+    if (labeled[0].y < top) {
+      const shift = top - labeled[0].y;
+      labeled.forEach((d) => {
+        d.y += shift;
+      });
+    }
+    const overflow = labeled[labeled.length - 1].y - bot;
+    if (overflow > 0) {
+      labeled.forEach((d) => {
+        d.y -= overflow;
+      });
+    }
+  }
+  labeled.forEach((d) => {
+    const text = svgEl("text", {
+      x: String(padL + plotW + 6),
+      y: d.y.toFixed(1),
+      "dominant-baseline": "middle",
+      fill: d.role === "yard" ? "var(--gold)" : d.role === "debt" ? "var(--red)" : d.role ? "var(--text)" : "var(--muted)",
+      "font-size": "10",
+    });
+    text.textContent = chartLabel(d.id, d.name);
+    svg.appendChild(text);
+  });
+
+  plot.replaceChildren(svg);
+}
+
+function renderChart() {
+  const host = $("chart");
+  const plot = $("chartPlot");
+  const cap = $("chartCap");
+  if (!host || !plot) return;
+  chartLines = collectChartLines();
+  if (chartLines.length < 2) {
+    host.hidden = true;
+    plot.replaceChildren();
+    return;
+  }
+  host.hidden = false;
+  cap.textContent = "Each line starts at 1. Log scale.";
+  if (plot.clientWidth > 40 && plot.clientHeight > 40) drawChart(plot, chartLines);
+  else requestAnimationFrame(() => drawChart(plot, chartLines));
+}
+
 function renderAll() {
   syncMonthWheels();
   const c = compute();
@@ -1000,6 +1332,7 @@ function renderAll() {
   renderWage();
   renderCounter();
   renderHeat(c);
+  renderChart();
   syncAmountDial();
   sizeDrums();
 }
@@ -1475,6 +1808,7 @@ function sizeDrums() {
 
 function onViewport() {
   pinShellViewport();
+  if (chartLines.length) requestAnimationFrame(() => drawChart($("chartPlot"), chartLines));
 }
 
 pinShellViewport();

@@ -26,7 +26,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 58;
+  --dv-css: 61;
 }
 
 *,
@@ -311,6 +311,31 @@ html.pwa-standalone .fit-stage {
 
 .plain[hidden] {
   display: none !important;
+}
+
+.chart {
+  flex: 0 1 156px;
+  min-height: 112px;
+  max-height: 176px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.chart[hidden] {
+  display: none !important;
+}
+
+.chart-plot {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.chart-plot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .scan {
