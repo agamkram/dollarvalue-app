@@ -1,4 +1,4 @@
-const APP_VERSION = "v66";
+const APP_VERSION = "v67";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -155,14 +155,16 @@ function scale(yardId, y0, m0, y1, m1) {
   return b / a;
 }
 
+/** A price keeps its cents under $1,000, and a third digit only when it says
+ *  something. So $2.80 and $159.25, but $0.90 rather than $0.900. */
 function money(n, digits) {
   if (n == null || !isFinite(n)) return "—";
   const abs = Math.abs(n);
-  const d =
-    digits != null ? digits : abs >= 1000 ? 0 : abs >= 100 ? 1 : abs >= 1 ? 2 : 3;
+  const max = digits != null ? digits : abs >= 1000 ? 0 : abs >= 1 ? 2 : 3;
+  const min = digits != null ? digits : abs >= 1000 ? 0 : 2;
   const s = abs.toLocaleString("en-US", {
-    minimumFractionDigits: d >= 2 ? d : 0,
-    maximumFractionDigits: d,
+    minimumFractionDigits: Math.min(min, max),
+    maximumFractionDigits: max,
   });
   return (n < 0 ? "-$" : "$") + s;
 }
@@ -943,13 +945,19 @@ function collectChartLines() {
     const ser = seriesOf(meta.id);
     if (!ser) return;
     const pts = chartPoints(ser, times);
-    if (!pts[0] || !(pts[0].v > 0)) return;
+    // Index off the first real point, not the first slot. A quarterly series
+    // prints in January, April, July, October; asking it for February used to
+    // drop the whole line even though the window was full of its prints.
+    // Still a quarter's grace only, so every line starts at 1 near the left
+    // edge and a series that begins mid-window cannot run away with the scale.
+    const first = pts.find(Boolean);
+    if (!first || !(first.v > 0) || first.t - ends.t0 > 0.3) return;
     let n = 0;
     pts.forEach((p) => {
       if (p) n += 1;
     });
     if (n < 2) return;
-    lines.push({ id: meta.id, name: meta.name, pts: pts, base: pts[0].v });
+    lines.push({ id: meta.id, name: meta.name, pts: pts, base: first.v });
   });
   return lines;
 }
@@ -1257,10 +1265,18 @@ function mountDrum(el, options, selectedId, onChange, conf) {
   });
   el.innerHTML = "";
   el.appendChild(ul);
+  ul.setAttribute("role", "presentation");
   el.tabIndex = 0;
   el.setAttribute("role", "listbox");
-  const dialLabel = el.closest(".dial") && el.closest(".dial").querySelector(".dial-label");
-  if (dialLabel) el.setAttribute("aria-label", dialLabel.textContent.trim());
+  const dial = el.closest(".dial");
+  const dialLabel = dial && dial.querySelector(".dial-label");
+  if (dialLabel) {
+    // Then and Now each hold two wheels. Named only for the dial, they are
+    // two listboxes called "Then" with no way to tell year from month.
+    const wheel = el.dataset.wheel || "";
+    const kind = /Year$/.test(wheel) ? " year" : /Month$/.test(wheel) ? " month" : "";
+    el.setAttribute("aria-label", dialLabel.textContent.trim() + kind);
+  }
   if (flickGain > 1) el.classList.add("drum-fast");
 
   function highlight(id) {
@@ -1508,10 +1524,22 @@ function mountDrum(el, options, selectedId, onChange, conf) {
   };
 }
 
+/** Every year any series prints. Built from CPI alone, the wheel started in
+ *  1800 and put gold back to 1792 and the wage back to 1790 out of reach. */
 function yearsList() {
-  const cpi = seriesOf("cpi") || seriesOf("cpi_u");
-  const maxY = cpi ? cpi.years[cpi.years.length - 1] : new Date().getFullYear();
-  const minY = cpi ? cpi.years[0] : 1913;
+  const all = state.data && state.data.series ? Object.values(state.data.series) : [];
+  let minY = Infinity;
+  let maxY = -Infinity;
+  all.forEach((ser) => {
+    const ys = ser.years || [];
+    if (!ys.length) return;
+    minY = Math.min(minY, ys[0]);
+    maxY = Math.max(maxY, ys[ys.length - 1]);
+  });
+  if (!isFinite(minY) || !isFinite(maxY)) {
+    minY = 1913;
+    maxY = new Date().getFullYear();
+  }
   const out = [];
   for (let y = minY; y <= maxY; y++) out.push({ id: y, label: String(y) });
   return out;
@@ -1522,30 +1550,26 @@ let thenMonthDrum = null;
 let nowMonthDrum = null;
 
 function monthHoles(ser, year) {
-  if (!ser) return { dead: [], annual: false };
   const dead = [];
-  let any = false;
+  if (!ser) return dead;
   for (let m = 1; m <= 12; m++) {
     if (atMonth(ser, year, m) == null) dead.push(m);
-    else any = true;
   }
-  return { dead: dead, annual: !any && atYear(ser, year) != null };
+  return dead;
 }
 
 function deadMonths(year) {
   const yd = yardMeta();
-  const yard = monthHoles(seriesOf(yd.series || yd.id), year);
   const it = itemMeta();
-  if (it.typed) return yard;
-  const item = monthHoles(seriesOf(it.series || it.id), year);
-  const seen = {};
-  const dead = [];
-  yard.dead.concat(item.dead).forEach((m) => {
-    if (seen[m]) return;
-    seen[m] = true;
-    dead.push(m);
-  });
-  return { dead: dead, annual: yard.annual || item.annual };
+  const dead = monthHoles(seriesOf(yd.series || yd.id), year);
+  if (!it.typed) {
+    monthHoles(seriesOf(it.series || it.id), year).forEach((m) => {
+      if (dead.indexOf(m) < 0) dead.push(m);
+    });
+  }
+  // Twelve dead months leaves Year as the only answer, so dim the whole wheel
+  // rather than show twelve choices that do nothing.
+  return { dead: dead, annual: dead.length === 12 };
 }
 
 function syncMonthWheels() {
@@ -1576,7 +1600,6 @@ function boot(data) {
   else state.thenYear = years[0].id;
 
   paintVersion();
-  document.title = "DollarValue " + APP_VERSION + " — several worths, not just CPI | Mark Maga";
 
   const yOpts = years;
   const mOpts = MONTHS.map((m) => ({ id: m.id, label: m.label }));

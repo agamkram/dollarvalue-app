@@ -1,23 +1,30 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v66";
+const CACHE = "dollarvalue-v67";
+
+const SHELL = [
+  "/",
+  "/about.html",
+  "/styles.css?v=67",
+  "/app.js?v=67",
+  "/data/series.json?v=67",
+  "/manifest.webmanifest",
+  "/favicon.ico",
+  "/favicon-32.png",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
+  "/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE).then((c) =>
-      c.addAll([
-        "/",
-        "/about.html",
-        "/styles.css?v=66",
-        "/app.js?v=66",
-        "/data/series.json?v=66",
-        "/manifest.webmanifest",
-        "/favicon.ico",
-        "/favicon-32.png",
-        "/icon-192.png",
-        "/apple-touch-icon.png",
-      ])
-    )
+    (async () => {
+      const c = await caches.open(CACHE);
+      // One at a time: addAll is all-or-nothing, so a single missing file
+      // would mean no service worker at all and no offline app.
+      await Promise.all(SHELL.map((url) => c.add(url).catch(() => {})));
+    })()
   );
 });
 
@@ -37,20 +44,25 @@ self.addEventListener("fetch", (event) => {
   // Vercel Web Analytics is injected at the edge. Do not cache it.
   if (new URL(req.url).pathname.startsWith("/_vercel/")) return;
   event.respondWith(
-    fetch(req)
-      .then((res) => {
+    (async () => {
+      try {
+        const res = await fetch(req);
         if (res.ok && new URL(req.url).origin === self.location.origin) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
-      })
-      .catch(() =>
-        caches.match(req).then((hit) => {
-          if (hit) return hit;
-          if (req.mode === "navigate") return caches.match("/");
-          return new Response("", { status: 504, statusText: "Offline" });
-        })
-      )
+      } catch (err) {
+        const hit = await caches.match(req);
+        if (hit) return hit;
+        // Every branch has to end in a Response. Handing respondWith an
+        // undefined cache miss fails the whole request instead of the page.
+        if (req.mode === "navigate") {
+          const shell = await caches.match("/");
+          if (shell) return shell;
+        }
+        return new Response("", { status: 504, statusText: "Offline" });
+      }
+    })()
   );
 });
