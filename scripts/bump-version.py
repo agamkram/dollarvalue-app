@@ -16,6 +16,8 @@ SPOTS = {
     "index EXPECTED": (INDEX, r'var EXPECTED = "v(\d+)"', 'var EXPECTED = "v{n}"'),
     "index verBadge": (INDEX, r'id="verBadge"[^>]*>v(\d+)', 'id="verBadge" title="Build">v{n}'),
     "about asset ?v=": (ABOUT, r"\?v=(\d+)", "?v={n}"),
+    "about EXPECTED": (ABOUT, r'var EXPECTED = "v(\d+)"', 'var EXPECTED = "v{n}"'),
+    "about verBadge": (ABOUT, r'id="verBadge"[^>]*>v(\d+)', 'id="verBadge" title="Build">v{n}'),
     "app APP_VERSION": (APP, r'const APP_VERSION = "v(\d+)"', 'const APP_VERSION = "v{n}"'),
     "sw CACHE": (SW, r'const CACHE = "dollarvalue-v(\d+)"', 'const CACHE = "dollarvalue-v{n}"'),
     "sw precache ?v=": (SW, r"\?v=(\d+)", "?v={n}"),

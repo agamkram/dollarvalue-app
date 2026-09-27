@@ -9,9 +9,23 @@
   <meta name="theme-color" content="#07090c" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="DollarValue" />
+  <meta
+    name="description"
+    content="How DollarValue reads a price, a wage, or a debt — several yardsticks, not just CPI."
+  />
+  <link rel="canonical" href="https://dollarvalue-app.vercel.app/about.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Mark Maga" />
+  <meta property="og:title" content="About DollarValue" />
+  <meta
+    property="og:description"
+    content="How DollarValue reads a price, a wage, or a debt — several yardsticks, not just CPI."
+  />
+  <meta property="og:url" content="https://dollarvalue-app.vercel.app/about.html" />
+  <meta property="og:image" content="https://dollarvalue-app.vercel.app/icon-512.png" />
   <title>About DollarValue | Mark Maga</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=65" />
+  <link rel="stylesheet" href="styles.css?v=66" />
   <link rel="icon" href="favicon.ico" sizes="32x32" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -23,7 +37,7 @@
 <body>
   <article class="about-body">
     <p><a href="./">← DollarValue</a></p>
-    <h1>DollarValue</h1>
+    <h1>DollarValue <span class="ver" id="verBadge" title="Build">v66</span></h1>
     <p>
       Item is the thing. In terms of is the measure. The lists match, except In
       terms of starts with CPI, PCE, chained CPI, and the GDP deflator.
@@ -68,7 +82,7 @@
     <p>
       The hourly wage is the private production-worker wage from 1964. Before
       that it is the hourly pay of factory production workers, including
-      benefits, scaled so 1964 meets the private wage. A month the measure
+      benefits, scaled so 1964 meets the private wage. A month the item or the measure
       does not print is gray. A year with no months snaps to Year. Ounces
       and coins are shown only for a dollar price. Per year when the span is a year
       or longer. Over a shorter span the figure is the total change. Each line
@@ -91,6 +105,17 @@
     <p><a href="https://markmaga.com">markmaga.com</a></p>
   </article>
   <script>
+    var EXPECTED = "v66";
+    (function () {
+      var badge = document.getElementById("verBadge");
+      if (!badge) return;
+      var css = (getComputedStyle(document.documentElement).getPropertyValue("--dv-css") || "").trim();
+      var n = EXPECTED.replace(/^v/, "");
+      if (!css || css !== n) {
+        badge.textContent = EXPECTED + (css ? " css" + css : " css?");
+        badge.classList.add("is-stale");
+      }
+    })();
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   </script>
   <script defer src="/_vercel/insights/script.js"></script>

@@ -1,4 +1,4 @@
-const APP_VERSION = "v65";
+const APP_VERSION = "v66";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -78,6 +78,26 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function paintVersion() {
+  const badge = $("verBadge");
+  if (!badge) return;
+  const js = APP_VERSION.replace(/^v/, "");
+  const html = String(window.__DV_EXPECTED || "").replace(/^v/, "");
+  const css = (getComputedStyle(document.documentElement).getPropertyValue("--dv-css") || "").trim();
+  let text = "v" + js;
+  let stale = false;
+  if (html && html !== js) {
+    text += " html" + html;
+    stale = true;
+  }
+  if (!css || css !== js) {
+    text += css ? " css" + css : " css?";
+    stale = true;
+  }
+  badge.textContent = text;
+  badge.classList.toggle("is-stale", stale);
+}
+
 function seriesOf(id) {
   return state.data && state.data.series && state.data.series[id];
 }
@@ -141,7 +161,7 @@ function money(n, digits) {
   const d =
     digits != null ? digits : abs >= 1000 ? 0 : abs >= 100 ? 1 : abs >= 1 ? 2 : 3;
   const s = abs.toLocaleString("en-US", {
-    minimumFractionDigits: abs < 1 ? d : 0,
+    minimumFractionDigits: d >= 2 ? d : 0,
     maximumFractionDigits: d,
   });
   return (n < 0 ? "-$" : "$") + s;
@@ -1225,6 +1245,7 @@ function mountDrum(el, options, selectedId, onChange, conf) {
   options.forEach((opt) => {
     const li = document.createElement("li");
     li.dataset.id = String(opt.id);
+    li.setAttribute("role", "option");
     li.textContent = opt.label;
     li.addEventListener("click", () => {
       if (dead.has(String(opt.id))) return;
@@ -1236,11 +1257,17 @@ function mountDrum(el, options, selectedId, onChange, conf) {
   });
   el.innerHTML = "";
   el.appendChild(ul);
+  el.tabIndex = 0;
+  el.setAttribute("role", "listbox");
+  const dialLabel = el.closest(".dial") && el.closest(".dial").querySelector(".dial-label");
+  if (dialLabel) el.setAttribute("aria-label", dialLabel.textContent.trim());
   if (flickGain > 1) el.classList.add("drum-fast");
 
   function highlight(id) {
     ul.querySelectorAll("li").forEach((li) => {
-      li.classList.toggle("is-on", li.dataset.id === String(id));
+      const on = li.dataset.id === String(id);
+      li.classList.toggle("is-on", on);
+      li.setAttribute("aria-selected", on ? "true" : "false");
     });
   }
 
@@ -1277,6 +1304,40 @@ function mountDrum(el, options, selectedId, onChange, conf) {
   let lock = false;
   let timer = 0;
   let dead = new Set();
+
+  function chooseLive(i) {
+    const opt = options[i];
+    if (!opt || dead.has(String(opt.id))) return;
+    selectedId = opt.id;
+    scrollToId(opt.id, true);
+    highlight(opt.id);
+    onChange(opt.id);
+  }
+
+  el.addEventListener("keydown", (e) => {
+    if (el.classList.contains("is-locked")) return;
+    let dir = 0;
+    if (e.key === "ArrowDown") dir = 1;
+    else if (e.key === "ArrowUp") dir = -1;
+    else if (e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const live = [];
+    for (let i = 0; i < options.length; i++) {
+      if (!dead.has(String(options[i].id))) live.push(i);
+    }
+    if (!live.length) return;
+    const cur = live.indexOf(indexOf(selectedId));
+    let pick;
+    if (e.key === "Home") pick = live[0];
+    else if (e.key === "End") pick = live[live.length - 1];
+    else {
+      const at = cur < 0 ? (dir > 0 ? -1 : live.length) : cur;
+      const j = at + dir;
+      if (j < 0 || j >= live.length) return;
+      pick = live[j];
+    }
+    chooseLive(pick);
+  });
 
   function nearestLive(i) {
     const open = (n) => options[n] && !dead.has(String(options[n].id));
@@ -1460,9 +1521,7 @@ const drums = [];
 let thenMonthDrum = null;
 let nowMonthDrum = null;
 
-function deadMonths(year) {
-  const yd = yardMeta();
-  const ser = seriesOf(yd.series || yd.id);
+function monthHoles(ser, year) {
   if (!ser) return { dead: [], annual: false };
   const dead = [];
   let any = false;
@@ -1471,6 +1530,22 @@ function deadMonths(year) {
     else any = true;
   }
   return { dead: dead, annual: !any && atYear(ser, year) != null };
+}
+
+function deadMonths(year) {
+  const yd = yardMeta();
+  const yard = monthHoles(seriesOf(yd.series || yd.id), year);
+  const it = itemMeta();
+  if (it.typed) return yard;
+  const item = monthHoles(seriesOf(it.series || it.id), year);
+  const seen = {};
+  const dead = [];
+  yard.dead.concat(item.dead).forEach((m) => {
+    if (seen[m]) return;
+    seen[m] = true;
+    dead.push(m);
+  });
+  return { dead: dead, annual: yard.annual || item.annual };
 }
 
 function syncMonthWheels() {
@@ -1500,7 +1575,7 @@ function boot(data) {
   if (last >= 2000) state.thenYear = 2000;
   else state.thenYear = years[0].id;
 
-  $("verBadge").textContent = APP_VERSION;
+  paintVersion();
   document.title = "DollarValue " + APP_VERSION + " — several worths, not just CPI | Mark Maga";
 
   const yOpts = years;
@@ -1701,3 +1776,4 @@ if (window.visualViewport) {
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(fitHeroAmts);
 }
+paintVersion();

@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 65;
+  --dv-css: 66;
 }
 
 *,
@@ -144,6 +144,14 @@ html.pwa-standalone .fit-stage {
   color: var(--gold);
   letter-spacing: 0.04em;
   line-height: 1;
+}
+
+.ver.is-stale {
+  color: var(--red);
+}
+
+.about-body h1 .ver {
+  margin-left: 6px;
 }
 
 .about-i {
@@ -412,6 +420,14 @@ html.pwa-standalone .dials {
   min-width: 0;
   min-height: 0;
   height: 100%;
+}
+
+.drum-shell:focus-within::before {
+  border-color: var(--gold);
+}
+
+.drum:focus {
+  outline: none;
 }
 
 .drum-shell::before {

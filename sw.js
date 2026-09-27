@@ -1,11 +1,22 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v65";
+const CACHE = "dollarvalue-v66";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((c) =>
-      c.addAll(["/", "/styles.css?v=65", "/app.js?v=65", "/data/series.json?v=65"])
+      c.addAll([
+        "/",
+        "/about.html",
+        "/styles.css?v=66",
+        "/app.js?v=66",
+        "/data/series.json?v=66",
+        "/manifest.webmanifest",
+        "/favicon.ico",
+        "/favicon-32.png",
+        "/icon-192.png",
+        "/apple-touch-icon.png",
+      ])
     )
   );
 });
@@ -34,6 +45,12 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req))
+      .catch(() =>
+        caches.match(req).then((hit) => {
+          if (hit) return hit;
+          if (req.mode === "navigate") return caches.match("/");
+          return new Response("", { status: 504, statusText: "Offline" });
+        })
+      )
   );
 });
