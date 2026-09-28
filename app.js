@@ -1,4 +1,4 @@
-const APP_VERSION = "v69";
+const APP_VERSION = "v70";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -602,11 +602,12 @@ function seriesPace(id) {
   return pace(((b - a) / a) * 100, ser);
 }
 
-function priceWagePair() {
+/** The wage's own rate used to ride along here. It is arithmetic on this rate
+ *  and the wage row's verdict, and it cost the line a second row. */
+function priceRate() {
   const prices = seriesPace("cpi");
-  const wage = seriesPace("wage_hourly");
-  if (!prices || !wage) return "";
-  return " Prices " + prices.text + ". Wage " + wage.text + ".";
+  if (!prices) return "";
+  return " Prices " + prices.text + ".";
 }
 
 function personYear(id, year) {
@@ -647,8 +648,10 @@ function burdenWindow(printYear, wheelYear, wheelMonth) {
 
 function renderWage() {
   const row = $("wageRow");
+  const note = $("wageNote");
   const hide = () => {
     if (row) row.hidden = true;
+    if (note) note.hidden = true;
   };
   if (!row || state.item === "wage_hourly" || state.yard === "wage_hourly") {
     hide();
@@ -668,6 +671,7 @@ function renderWage() {
       ? dollarLabel()
       : yardMeta().name + " · " + whenLabel(state.nowYear, state.nowMonth, yardSer);
   row.hidden = false;
+  if (note) note.hidden = false;
   const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
   const vs = ((w1 - w0 * ratio) / (w0 * ratio)) * 100;
   const wagePace = pace(vs, ser);
@@ -716,12 +720,15 @@ function burdenView(seriesId) {
 
 function renderCounter() {
   const row = $("counter");
+  const note = $("debtNote");
   const b = burdenView("debt_person");
   if (!row || !b) {
     if (row) row.hidden = true;
+    if (note) note.hidden = true;
     return;
   }
   row.hidden = false;
+  if (note) note.hidden = false;
   setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(b.a0.v), "", "Debt · " + b.a0.y);
   setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(b.expected), "", b.dollars);
   setHeroBay(
@@ -738,12 +745,15 @@ function renderCounter() {
 
 function renderTax() {
   const row = $("taxRow");
+  const note = $("taxNote");
   const b = burdenView("tax_person");
   if (!row || !b) {
     if (row) row.hidden = true;
+    if (note) note.hidden = true;
     return;
   }
   row.hidden = false;
+  if (note) note.hidden = false;
   setHeroBay("taxFromSide", "taxFrom", "taxFromUnit", "taxFromCap", money(b.a0.v), "", "Tax · " + b.a0.y);
   setHeroBay("taxToSide", "taxTo", "taxToUnit", "taxBy", money(b.expected), "", b.dollars);
   setHeroBay(
@@ -782,8 +792,8 @@ function plainLine(c, note) {
         exp +
         " buys in " +
         nowL +
-        ", in everyday prices." +
-        priceWagePair()
+        "." +
+        priceRate()
       );
     }
     if (yardRole(c.yd) === "prices") {
