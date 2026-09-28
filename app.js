@@ -1,4 +1,4 @@
-const APP_VERSION = "v76";
+const APP_VERSION = "v78";
 
 const MONTHS = [
   { id: 0, label: "Year" },
