@@ -1,4 +1,4 @@
-const APP_VERSION = "v67";
+const APP_VERSION = "v68";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -330,6 +330,21 @@ function pace(vs, ser) {
   };
 }
 
+/** Same annualizing as pace, over a span of our choosing. Debt and taxes
+ *  print through their own last year, which is not always the year on the wheel. */
+function paceOverYears(vs, years) {
+  if (vs == null || !isFinite(vs) || !(years > 0)) return null;
+  if (years < 1) return { text: pct(vs), tone: vs > 8 ? "hot" : vs < -8 ? "cool" : "" };
+  const factor = 1 + vs / 100;
+  if (!(factor > 0)) return { text: pct(vs), tone: vs > 0 ? "hot" : "cool" };
+  const ann = (Math.pow(factor, 1 / years) - 1) * 100;
+  const sign = ann > 0 ? "+" : "";
+  return {
+    text: sign + ann.toFixed(1) + "%/yr",
+    tone: ann > 2 ? "hot" : ann < -2 ? "cool" : "",
+  };
+}
+
 function fmtPlain(n, dollars) {
   if (n == null || !isFinite(n)) return "—";
   return dollars === false ? fmtMeasure(n) : money(n);
@@ -440,6 +455,9 @@ function fitHeroAmts() {
     ["debtFromSide", "debtFrom", 26],
     ["debtToSide", "debtTo", 26],
     ["debtActualSide", "debtActual", 26],
+    ["taxFromSide", "taxFrom", 26],
+    ["taxToSide", "taxTo", 26],
+    ["taxActualSide", "taxActual", 26],
   ];
   for (const [sideId, amtId, maxPx] of pairs) {
     fitHeroAmt($(amtId), $(sideId), maxPx);
@@ -651,101 +669,112 @@ function renderWage() {
       : yardMeta().name + " · " + whenLabel(state.nowYear, state.nowMonth, yardSer);
   row.hidden = false;
   const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
-  setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Wage · " + wageCap(state.thenYear, state.thenMonth));
+  const vs = ((w1 - w0 * ratio) / (w0 * ratio)) * 100;
+  const wagePace = pace(vs, ser);
+  // Uncolored on purpose. Pay beating prices is not an alarm, and the hot
+  // color would print good news in red.
+  const nowCap =
+    "Wage · " + wageCap(state.nowYear, state.nowMonth) + (wagePace ? " · " + wagePace.text : "");
+  setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Production wage · " + wageCap(state.thenYear, state.thenMonth));
   setHeroBay("wageToSide", "wageTo", "wageToUnit", "wageBy", money(w0 * ratio), "", mid);
-  setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", "Wage · " + wageCap(state.nowYear, state.nowMonth));
+  setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", nowCap);
+}
+
+function burdenView(seriesId) {
+  const a0 = personYear(seriesId, state.thenYear);
+  const a1 = personYear(seriesId, state.nowYear);
+  if (!a0 || !a1) return null;
+  if (a0.y === a1.y && state.thenYear === state.nowYear) return null;
+  const samePrint = a0.y === a1.y;
+  let ratio;
+  let dollars;
+  if (samePrint) {
+    ratio = 1;
+    dollars = dollarLabel(a1.y, 0);
+  } else {
+    const a = burdenWindow(a0.y, state.thenYear, state.thenMonth);
+    const b = burdenWindow(a1.y, state.nowYear, state.nowMonth);
+    ratio = scale("cpi", a.y, a.m, b.y, b.m);
+    dollars = b ? dollarLabel(b.y, b.m) : "";
+  }
+  if (ratio == null) return null;
+  const expected = a0.v * ratio;
+  let paceText = "";
+  let tone = "";
+  if (!samePrint && expected !== 0) {
+    const gap = ((a1.v - expected) / expected) * 100;
+    const p = paceOverYears(gap, Math.abs(a1.y - a0.y));
+    if (p) {
+      paceText = " · " + p.text;
+      tone = p.tone || "";
+    }
+  }
+  return { a0, a1, expected, dollars, samePrint, paceText, tone };
 }
 
 function renderCounter() {
   const row = $("counter");
   const line = $("counterPlain");
-  const d0 = personYear("debt_person", state.thenYear);
-  const d1 = personYear("debt_person", state.nowYear);
-  const samePrint = d0 && d1 && d0.y === d1.y && state.thenYear === state.nowYear;
-  if (!row || !d0 || !d1 || samePrint) {
-    if (row) row.hidden = true;
-    if (line) line.hidden = true;
-    return;
-  }
-  const debtSame = d0.y === d1.y;
-  let ratio;
-  let dollars;
-  if (debtSame) {
-    ratio = 1;
-    dollars = dollarLabel(d1.y, 0);
-  } else {
-    const a = burdenWindow(d0.y, state.thenYear, state.thenMonth);
-    const b = burdenWindow(d1.y, state.nowYear, state.nowMonth);
-    ratio = scale("cpi", a.y, a.m, b.y, b.m);
-    dollars = b ? dollarLabel(b.y, b.m) : "";
-  }
-  if (ratio == null) {
+  const b = burdenView("debt_person");
+  if (!row || !b) {
     if (row) row.hidden = true;
     if (line) line.hidden = true;
     return;
   }
   row.hidden = false;
-  const expected = d0.v * ratio;
-  const t0 = personYear("tax_person", state.thenYear);
-  const t1 = personYear("tax_person", state.nowYear);
-  setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(d0.v), "", "Debt · " + d0.y);
-  setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(expected), "", dollars);
-  setHeroBay("debtActualSide", "debtActual", "debtActualUnit", "debtCheck", money(d1.v), "", "Debt · " + d1.y);
-  let tax = "";
-  if (t0 && t1) {
-    const taxSame = t0.y === t1.y;
-    let taxRatio;
-    let taxDollars;
-    if (taxSame) {
-      taxRatio = 1;
-      taxDollars = dollarLabel(t1.y, 0);
-    } else {
-      const ta = burdenWindow(t0.y, state.thenYear, state.thenMonth);
-      const tb = burdenWindow(t1.y, state.nowYear, state.nowMonth);
-      taxRatio = scale("cpi", ta.y, ta.m, tb.y, tb.m);
-      taxDollars = tb ? dollarLabel(tb.y, tb.m) : "";
-    }
-    if (taxRatio != null) {
-      const taxVerb = t1.y === latestYear("tax_person") ? "are" : "were";
-      tax =
-        " Taxes per person were " +
-        money(t0.v) +
-        " in " +
-        t0.y +
-        ", or " +
-        money(t0.v * taxRatio) +
-        " in " +
-        taxDollars +
-        ". They " +
-        taxVerb +
-        " " +
-        (taxSame ? "still " : "") +
-        money(t1.v) +
-        " in " +
-        t1.y +
-        ".";
-    }
-  }
-  const debtVerb = d1.y === latestYear("debt_person") ? "is" : "was";
+  setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(b.a0.v), "", "Debt · " + b.a0.y);
+  setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(b.expected), "", b.dollars);
+  setHeroBay(
+    "debtActualSide",
+    "debtActual",
+    "debtActualUnit",
+    "debtCheck",
+    money(b.a1.v),
+    "",
+    "Debt · " + b.a1.y + b.paceText,
+    b.tone
+  );
+  const debtVerb = b.a1.y === latestYear("debt_person") ? "is" : "was";
   line.hidden = false;
   line.textContent =
     "One person's share of the federal debt was " +
-    money(d0.v) +
+    money(b.a0.v) +
     " in " +
-    d0.y +
+    b.a0.y +
     ", or " +
-    money(expected) +
+    money(b.expected) +
     " in " +
-    dollars +
+    b.dollars +
     ". It " +
     debtVerb +
     " " +
-    (debtSame ? "still " : "") +
-    money(d1.v) +
+    (b.samePrint ? "still " : "") +
+    money(b.a1.v) +
     " in " +
-    d1.y +
-    "." +
-    tax;
+    b.a1.y +
+    ".";
+}
+
+function renderTax() {
+  const row = $("taxRow");
+  const b = burdenView("tax_person");
+  if (!row || !b) {
+    if (row) row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  setHeroBay("taxFromSide", "taxFrom", "taxFromUnit", "taxFromCap", money(b.a0.v), "", "Tax · " + b.a0.y);
+  setHeroBay("taxToSide", "taxTo", "taxToUnit", "taxBy", money(b.expected), "", b.dollars);
+  setHeroBay(
+    "taxActualSide",
+    "taxActual",
+    "taxActualUnit",
+    "taxCheck",
+    money(b.a1.v),
+    "",
+    "Tax · " + b.a1.y + b.paceText,
+    b.tone
+  );
 }
 
 function plainLine(c, note) {
@@ -1178,7 +1207,7 @@ function drawChart(plot, lines) {
     return true;
   });
   labeled.sort((a, b) => a.y - b.y);
-  const gap = 11;
+  const gap = 13;
   for (let i = 1; i < labeled.length; i++) {
     if (labeled[i].y < labeled[i - 1].y + gap) labeled[i].y = labeled[i - 1].y + gap;
   }
@@ -1241,6 +1270,7 @@ function renderAll() {
   renderHero(c);
   renderWage();
   renderCounter();
+  renderTax();
   renderChart();
   syncAmountDial();
   sizeDrums();
