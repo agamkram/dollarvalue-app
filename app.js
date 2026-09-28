@@ -1,4 +1,4 @@
-const APP_VERSION = "v78";
+const APP_VERSION = "v79";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -1716,6 +1716,58 @@ function pwaExtraBottomPx() {
 let lastFillKey = "";
 let lastDrumH = 0;
 
+function isPhoneShell() {
+  const w = window.innerWidth || 0;
+  const h = window.innerHeight || 0;
+  if (Math.min(w, h) <= 500) return true;
+  return window.matchMedia("(max-width: 500px)").matches;
+}
+
+/** Phone layout on a fixed 390×844 board, enlarged until its height fills the glass. */
+function fitArtboard() {
+  const stage = document.getElementById("fit-stage");
+  const app = document.getElementById("app");
+  if (!stage || !app) return;
+  if (isPhoneShell()) {
+    if (stage.classList.contains("is-artboard")) lastDrumH = 0;
+    stage.classList.remove("is-artboard");
+    app.style.zoom = "";
+    app.style.transform = "";
+    app.style.width = "";
+    app.style.height = "";
+    app.style.flex = "";
+    app.style.maxWidth = "";
+    app.style.minHeight = "";
+    return;
+  }
+  if (!stage.classList.contains("is-artboard")) lastDrumH = 0;
+  stage.classList.add("is-artboard");
+  const ART_W = 390;
+  const ART_H = 844;
+  app.style.width = ART_W + "px";
+  app.style.height = ART_H + "px";
+  app.style.flex = "0 0 auto";
+  app.style.maxWidth = "none";
+  app.style.minHeight = "0";
+  const cs = getComputedStyle(stage);
+  const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  const sw = Math.max(1, stage.clientWidth - padX);
+  const sh = Math.max(1, stage.clientHeight - padY);
+  const scale = Math.min(sw / ART_W, sh / ART_H);
+  const touch =
+    (navigator.maxTouchPoints || 0) > 0 ||
+    window.matchMedia("(pointer: coarse)").matches;
+  if (touch && window.CSS && CSS.supports("zoom", "1")) {
+    app.style.transform = "";
+    app.style.zoom = String(scale);
+  } else {
+    app.style.zoom = "";
+    app.style.transform = "scale(" + scale + ")";
+    app.style.transformOrigin = "center center";
+  }
+}
+
 function pinShellViewport() {
   const root = document.documentElement;
   const standalone = isStandaloneDisplay() || root.classList.contains("pwa-standalone");
@@ -1736,6 +1788,7 @@ function pinShellViewport() {
       root.style.height = total + "px";
       root.style.minHeight = total + "px";
     }
+    fitArtboard();
     sizeDrums();
     return;
   }
@@ -1767,13 +1820,15 @@ function pinShellViewport() {
     root.style.setProperty("--vv-w", width + "px");
     root.style.setProperty("--vv-h", height + "px");
   }
+  fitArtboard();
   sizeDrums();
 }
 
 function sizeDrums() {
   const shell = document.querySelector(".drum-shell");
   if (!shell) return;
-  const h = Math.round(shell.getBoundingClientRect().height);
+  const artboard = document.getElementById("fit-stage")?.classList.contains("is-artboard");
+  const h = Math.round(artboard ? shell.offsetHeight : shell.getBoundingClientRect().height);
   if (h < 48 || h === lastDrumH) {
     fitHeroAmts();
     return;

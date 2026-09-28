@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 78;
+  --dv-css: 79;
 }
 
 *,
@@ -109,6 +109,20 @@ html.pwa-standalone .fit-stage {
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+
+/* Tablet / desktop: phone board, scaled to the screen height. Phone stays fluid. */
+.fit-stage.is-artboard {
+  align-items: center;
+  justify-content: center;
+}
+
+.fit-stage.is-artboard .app {
+  flex: 0 0 auto;
+  width: 390px;
+  height: 844px;
+  max-width: none;
+  min-height: 0;
 }
 
 /* Numbers can scroll. The wheels keep a real height, so a short
