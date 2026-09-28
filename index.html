@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v68";
+        var EXPECTED = "v69";
         window.__DV_EXPECTED = EXPECTED;
         // app.js paints the badge, so it cannot report its own absence. Left
         // alone a page whose script never arrived shows a calm, wrong build.
@@ -123,7 +123,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=68" />
+  <link rel="stylesheet" href="styles.css?v=69" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -131,7 +131,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v68</span>
+        <span class="ver" id="verBadge" title="Build">v69</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -209,7 +209,6 @@
         <p class="hero-cap" id="taxCheck"></p>
       </div>
     </section>
-    <p class="plain plain-counter" id="counterPlain" hidden></p>
 
     <section class="chart" id="chart" hidden aria-label="Movement over the selected years">
       <div class="chart-plot" id="chartPlot"></div>
@@ -249,7 +248,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=68" defer></script>
+  <script src="app.js?v=69" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     // Vercel serves this from the edge. Asking for it on a local preview only

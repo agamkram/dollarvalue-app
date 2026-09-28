@@ -1,4 +1,4 @@
-const APP_VERSION = "v68";
+const APP_VERSION = "v69";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -671,10 +671,12 @@ function renderWage() {
   const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
   const vs = ((w1 - w0 * ratio) / (w0 * ratio)) * 100;
   const wagePace = pace(vs, ser);
+  // No name here: the first bay already says which wage this is, and the
+  // repeat pushed this caption onto a second line.
   // Uncolored on purpose. Pay beating prices is not an alarm, and the hot
   // color would print good news in red.
   const nowCap =
-    "Wage · " + wageCap(state.nowYear, state.nowMonth) + (wagePace ? " · " + wagePace.text : "");
+    wageCap(state.nowYear, state.nowMonth) + (wagePace ? " · " + wagePace.text : "");
   setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Production wage · " + wageCap(state.thenYear, state.thenMonth));
   setHeroBay("wageToSide", "wageTo", "wageToUnit", "wageBy", money(w0 * ratio), "", mid);
   setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", nowCap);
@@ -714,11 +716,9 @@ function burdenView(seriesId) {
 
 function renderCounter() {
   const row = $("counter");
-  const line = $("counterPlain");
   const b = burdenView("debt_person");
   if (!row || !b) {
     if (row) row.hidden = true;
-    if (line) line.hidden = true;
     return;
   }
   row.hidden = false;
@@ -734,25 +734,6 @@ function renderCounter() {
     "Debt · " + b.a1.y + b.paceText,
     b.tone
   );
-  const debtVerb = b.a1.y === latestYear("debt_person") ? "is" : "was";
-  line.hidden = false;
-  line.textContent =
-    "One person's share of the federal debt was " +
-    money(b.a0.v) +
-    " in " +
-    b.a0.y +
-    ", or " +
-    money(b.expected) +
-    " in " +
-    b.dollars +
-    ". It " +
-    debtVerb +
-    " " +
-    (b.samePrint ? "still " : "") +
-    money(b.a1.v) +
-    " in " +
-    b.a1.y +
-    ".";
 }
 
 function renderTax() {
