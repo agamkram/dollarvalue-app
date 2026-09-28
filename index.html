@@ -80,7 +80,7 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v72";
+        var EXPECTED = "v73";
         window.__DV_EXPECTED = EXPECTED;
         // app.js paints the badge, so it cannot report its own absence. Left
         // alone a page whose script never arrived shows a calm, wrong build.
@@ -123,7 +123,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=72" />
+  <link rel="stylesheet" href="styles.css?v=73" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -131,7 +131,7 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v72</span>
+        <span class="ver" id="verBadge" title="Build">v73</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -142,15 +142,15 @@
         <p class="hero-unit" id="heroFromUnit" hidden></p>
         <p class="hero-cap" id="heroFromCap"></p>
       </div>
-      <div class="hero-side" id="heroToSide">
-        <p class="hero-amt hero-amt-now" id="heroTo"></p>
-        <p class="hero-unit" id="heroToUnit" hidden></p>
-        <p class="hero-cap" id="heroBy"></p>
-      </div>
       <div class="hero-side" id="heroActualSide">
         <p class="hero-amt" id="heroActual"></p>
         <p class="hero-unit" id="heroActualUnit" hidden></p>
         <p class="hero-cap" id="heroCheck"></p>
+      </div>
+      <div class="hero-side" id="heroToSide">
+        <p class="hero-amt hero-amt-now" id="heroTo"></p>
+        <p class="hero-unit" id="heroToUnit" hidden></p>
+        <p class="hero-cap" id="heroBy"></p>
       </div>
     </section>
     <p class="hero-measure" id="heroMeasure" hidden></p>
@@ -162,15 +162,15 @@
         <p class="hero-unit" id="wageFromUnit" hidden></p>
         <p class="hero-cap" id="wageFromCap"></p>
       </div>
-      <div class="hero-side" id="wageToSide">
-        <p class="hero-amt hero-amt-now" id="wageTo"></p>
-        <p class="hero-unit" id="wageToUnit" hidden></p>
-        <p class="hero-cap" id="wageBy"></p>
-      </div>
       <div class="hero-side" id="wageActualSide">
         <p class="hero-amt" id="wageActual"></p>
         <p class="hero-unit" id="wageActualUnit" hidden></p>
         <p class="hero-cap" id="wageCheck"></p>
+      </div>
+      <div class="hero-side" id="wageToSide">
+        <p class="hero-amt hero-amt-now" id="wageTo"></p>
+        <p class="hero-unit" id="wageToUnit" hidden></p>
+        <p class="hero-cap" id="wageBy"></p>
       </div>
     </section>
     <p class="row-note" id="wageNote" hidden>What an hour of work paid.</p>
@@ -181,15 +181,15 @@
         <p class="hero-unit" id="taxFromUnit" hidden></p>
         <p class="hero-cap" id="taxFromCap"></p>
       </div>
-      <div class="hero-side" id="taxToSide">
-        <p class="hero-amt hero-amt-now" id="taxTo"></p>
-        <p class="hero-unit" id="taxToUnit" hidden></p>
-        <p class="hero-cap" id="taxBy"></p>
-      </div>
       <div class="hero-side" id="taxActualSide">
         <p class="hero-amt" id="taxActual"></p>
         <p class="hero-unit" id="taxActualUnit" hidden></p>
         <p class="hero-cap" id="taxCheck"></p>
+      </div>
+      <div class="hero-side" id="taxToSide">
+        <p class="hero-amt hero-amt-now" id="taxTo"></p>
+        <p class="hero-unit" id="taxToUnit" hidden></p>
+        <p class="hero-cap" id="taxBy"></p>
       </div>
     </section>
     <p class="row-note" id="taxNote" hidden>Each person's share of federal taxes.</p>
@@ -200,15 +200,15 @@
         <p class="hero-unit" id="debtFromUnit" hidden></p>
         <p class="hero-cap" id="debtFromCap"></p>
       </div>
-      <div class="hero-side" id="debtToSide">
-        <p class="hero-amt hero-amt-now" id="debtTo"></p>
-        <p class="hero-unit" id="debtToUnit" hidden></p>
-        <p class="hero-cap" id="debtBy"></p>
-      </div>
       <div class="hero-side" id="debtActualSide">
         <p class="hero-amt" id="debtActual"></p>
         <p class="hero-unit" id="debtActualUnit" hidden></p>
         <p class="hero-cap" id="debtCheck"></p>
+      </div>
+      <div class="hero-side" id="debtToSide">
+        <p class="hero-amt hero-amt-now" id="debtTo"></p>
+        <p class="hero-unit" id="debtToUnit" hidden></p>
+        <p class="hero-cap" id="debtBy"></p>
       </div>
     </section>
     <p class="row-note" id="debtNote" hidden>Each person's share of the federal debt.</p>
@@ -251,7 +251,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=72" defer></script>
+  <script src="app.js?v=73" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     // Vercel serves this from the edge. Asking for it on a local preview only
