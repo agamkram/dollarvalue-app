@@ -1,4 +1,4 @@
-const APP_VERSION = "v74";
+const APP_VERSION = "v75";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -76,26 +76,6 @@ const state = {
 
 function $(id) {
   return document.getElementById(id);
-}
-
-function paintVersion() {
-  const badge = $("verBadge");
-  if (!badge) return;
-  const js = APP_VERSION.replace(/^v/, "");
-  const html = String(window.__DV_EXPECTED || "").replace(/^v/, "");
-  const css = (getComputedStyle(document.documentElement).getPropertyValue("--dv-css") || "").trim();
-  let text = "v" + js;
-  let stale = false;
-  if (html && html !== js) {
-    text += " html" + html;
-    stale = true;
-  }
-  if (!css || css !== js) {
-    text += css ? " css" + css : " css?";
-    stale = true;
-  }
-  badge.textContent = text;
-  badge.classList.toggle("is-stale", stale);
 }
 
 function seriesOf(id) {
@@ -1620,8 +1600,6 @@ function boot(data) {
   if (last >= 2000) state.thenYear = 2000;
   else state.thenYear = years[0].id;
 
-  paintVersion();
-
   const yOpts = years;
   const mOpts = MONTHS.map((m) => ({ id: m.id, label: m.label }));
   const iOpts = ITEMS.map((it) => ({ id: it.id, label: it.name }));
@@ -1820,4 +1798,3 @@ if (window.visualViewport) {
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(fitHeroAmts);
 }
-paintVersion();

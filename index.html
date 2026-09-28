@@ -80,17 +80,6 @@
           r.style.setProperty("--vv-w", iw + "px");
           r.style.setProperty("--vv-h", ih + "px");
         }
-        var EXPECTED = "v74";
-        window.__DV_EXPECTED = EXPECTED;
-        // app.js paints the badge, so it cannot report its own absence. Left
-        // alone a page whose script never arrived shows a calm, wrong build.
-        window.addEventListener("load", function () {
-          if (typeof APP_VERSION !== "undefined") return;
-          var badge = document.getElementById("verBadge");
-          if (!badge) return;
-          badge.textContent = EXPECTED + " js?";
-          badge.classList.add("is-stale");
-        });
       } catch (e) {}
     })();
   </script>
@@ -123,7 +112,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=74" />
+  <link rel="stylesheet" href="styles.css?v=75" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -131,7 +120,6 @@
     <header class="topbar" role="banner">
       <div class="topbar-title">
         <h1 class="brand-title">DollarValue</h1>
-        <span class="ver" id="verBadge" title="Build">v74</span>
         <a class="about-i" href="./about.html" aria-label="About DollarValue" title="About">i</a>
       </div>
     </header>
@@ -251,7 +239,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=74" defer></script>
+  <script src="app.js?v=75" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     // Vercel serves this from the edge. Asking for it on a local preview only

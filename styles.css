@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 74;
+  --dv-css: 75;
 }
 
 *,
@@ -136,22 +136,6 @@ html.pwa-standalone .fit-stage {
   letter-spacing: -0.02em;
   line-height: 22px;
   white-space: nowrap;
-}
-
-.ver {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  color: var(--gold);
-  letter-spacing: 0.04em;
-  line-height: 1;
-}
-
-.ver.is-stale {
-  color: var(--red);
-}
-
-.about-body h1 .ver {
-  margin-left: 6px;
 }
 
 .about-i {

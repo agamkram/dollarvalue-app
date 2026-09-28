@@ -25,7 +25,7 @@
   <meta property="og:image" content="https://dollarvalue-app.vercel.app/icon-512.png" />
   <title>About DollarValue | Mark Maga</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=74" />
+  <link rel="stylesheet" href="styles.css?v=75" />
   <link rel="icon" href="favicon.ico" sizes="32x32" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
@@ -38,7 +38,7 @@
 <body>
   <article class="about-body">
     <p><a href="./">← DollarValue</a></p>
-    <h1>DollarValue <span class="ver" id="verBadge" title="Build">v74</span></h1>
+    <h1>DollarValue</h1>
     <p class="about-lede">
       A dollar then, and what that dollar is now. Under it, an hour of pay, a share of federal taxes, and a share of the federal debt, each read the same way.
     </p>
@@ -114,17 +114,6 @@
     <p><a href="https://markmaga.com">markmaga.com</a></p>
   </article>
   <script>
-    var EXPECTED = "v74";
-    (function () {
-      var badge = document.getElementById("verBadge");
-      if (!badge) return;
-      var css = (getComputedStyle(document.documentElement).getPropertyValue("--dv-css") || "").trim();
-      var n = EXPECTED.replace(/^v/, "");
-      if (!css || css !== n) {
-        badge.textContent = EXPECTED + (css ? " css" + css : " css?");
-        badge.classList.add("is-stale");
-      }
-    })();
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     if (!/^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)?$/.test(location.hostname)) {
       var dvAnalytics = document.createElement("script");
