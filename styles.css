@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 82;
+  --dv-css: 84;
 }
 
 *,
@@ -305,6 +305,12 @@ html.pwa-standalone .fit-stage {
 
 .hero-counter .hero-amt {
   font-size: 1.7rem;
+}
+
+.hero-sym {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .plain {

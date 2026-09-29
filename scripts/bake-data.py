@@ -646,6 +646,49 @@ def build_person_burden(series: dict, key: str) -> None:
     )
 
 
+def build_fiscal_ratios(series: dict, key: str) -> None:
+    """Net interest per tax dollar, in cents, and debt held by the public as a
+    percent of GDP. Both are fiscal years."""
+    interest = {int(d[:4]): v for d, v in fred_obs(key, "FYOINT")}
+    receipts = {int(d[:4]): v for d, v in fred_obs(key, "FYFR")}
+    debt_gdp = {int(d[:4]): v for d, v in fred_obs(key, "FYPUGDA188S")}
+    if not (150_000 < interest.get(2000, 0) < 300_000):
+        raise RuntimeError("FYOINT is no longer millions")
+    if not (25 < debt_gdp.get(2000, 0) < 45):
+        raise RuntimeError("FYPUGDA188S is no longer percent")
+    cents = {y: interest[y] / receipts[y] * 100 for y in interest if receipts.get(y)}
+    for sid, name, source, fred, rows in (
+        (
+            "interest_share",
+            "Interest per tax dollar",
+            "Net interest outlays divided by federal receipts, in cents",
+            "FYOINT/FYFR",
+            cents,
+        ),
+        (
+            "debt_gdp",
+            "Debt to GDP",
+            "Debt held by the public as a percent of fiscal-year GDP",
+            "FYPUGDA188S",
+            debt_gdp,
+        ),
+    ):
+        years = sorted(rows)
+        if len(years) < 40:
+            raise RuntimeError("%s n=%d" % (sid, len(years)))
+        series[sid] = {
+            "id": sid,
+            "name": name,
+            "kind": "ratio",
+            "source": source,
+            "fred": fred,
+            "years": years,
+            "annual": [round(rows[y], 4) for y in years],
+            "monthly": {},
+        }
+        print("  %s %s–%s" % (sid, years[0], years[-1]))
+
+
 def main() -> None:
     key = load_key()
     if not key:
@@ -709,6 +752,7 @@ def main() -> None:
     splice_sp(series, raw, shiller_sp())
     splice_dow(series, raw, measuringworth_dow())
     build_person_burden(series, key)
+    build_fiscal_ratios(series, key)
 
     # One CPI yardstick: Minneapolis 1800–1912 scaled onto BLS 1913–now.
     if "cpi_u" in series and "cpi_mpls" in series:

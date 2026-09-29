@@ -112,7 +112,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Michroma&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=82" />
+  <link rel="stylesheet" href="styles.css?v=84" />
 </head>
 <body>
   <div class="fit-stage" id="fit-stage">
@@ -164,24 +164,24 @@
     </section>
     <p class="row-note" id="wageNote" hidden>What an hour of work paid.</p>
 
-    <section class="hero hero-counter" id="taxRow" hidden aria-label="Federal taxes per person">
-      <div class="hero-side" id="taxFromSide">
-        <p class="hero-amt" id="taxFrom"></p>
-        <p class="hero-unit" id="taxFromUnit" hidden></p>
-        <p class="hero-cap" id="taxFromCap"></p>
+    <section class="hero hero-counter" id="interestRow" hidden aria-label="Interest per tax dollar">
+      <div class="hero-side" id="intFromSide">
+        <p class="hero-amt" id="intFrom"></p>
+        <p class="hero-unit" id="intFromUnit" hidden></p>
+        <p class="hero-cap" id="intFromCap"></p>
       </div>
-      <div class="hero-side" id="taxActualSide">
-        <p class="hero-amt" id="taxActual"></p>
-        <p class="hero-unit" id="taxActualUnit" hidden></p>
-        <p class="hero-cap" id="taxCheck"></p>
+      <div class="hero-side" id="intActualSide">
+        <p class="hero-amt" id="intActual"></p>
+        <p class="hero-unit" id="intActualUnit" hidden></p>
+        <p class="hero-cap" id="intCheck"></p>
       </div>
-      <div class="hero-side" id="taxToSide">
-        <p class="hero-amt hero-amt-now" id="taxTo"></p>
-        <p class="hero-unit" id="taxToUnit" hidden></p>
-        <p class="hero-cap" id="taxBy"></p>
+      <div class="hero-side" id="intToSide">
+        <p class="hero-amt hero-amt-now" id="intTo"></p>
+        <p class="hero-unit" id="intToUnit" hidden></p>
+        <p class="hero-cap" id="intBy"></p>
       </div>
     </section>
-    <p class="row-note" id="taxNote" hidden>Each person's share of federal taxes.</p>
+    <p class="row-note" id="interestNote" hidden>Interest paid from each tax dollar.</p>
 
     <section class="hero hero-counter" id="counter" hidden aria-label="One person's federal debt">
       <div class="hero-side" id="debtFromSide">
@@ -237,7 +237,7 @@
     </section>
   </div>
   </div>
-  <script src="app.js?v=82" defer></script>
+  <script src="app.js?v=84" defer></script>
   <script>
     window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     // Vercel serves this from the edge. Asking for it on a local preview only

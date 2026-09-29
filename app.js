@@ -1,4 +1,4 @@
-const APP_VERSION = "v82";
+const APP_VERSION = "v84";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -309,7 +309,7 @@ function pace(vs, ser) {
   };
 }
 
-/** Same annualizing as pace, over a span of our choosing. Debt and taxes
+/** Same annualizing as pace, over a span of our choosing. Debt and interest
  *  print through their own last year, which is not always the year on the wheel. */
 function paceOverYears(vs, years) {
   if (vs == null || !isFinite(vs) || !(years > 0)) return null;
@@ -434,9 +434,9 @@ function fitHeroAmts() {
     ["debtFromSide", "debtFrom", 26],
     ["debtToSide", "debtTo", 26],
     ["debtActualSide", "debtActual", 26],
-    ["taxFromSide", "taxFrom", 26],
-    ["taxToSide", "taxTo", 26],
-    ["taxActualSide", "taxActual", 26],
+    ["intFromSide", "intFrom", 26],
+    ["intToSide", "intTo", 26],
+    ["intActualSide", "intActual", 26],
   ];
   for (const [sideId, amtId, maxPx] of pairs) {
     fitHeroAmt($(amtId), $(sideId), maxPx);
@@ -457,7 +457,15 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
     return;
   }
   side.classList.remove("is-empty");
-  amtEl.textContent = amt;
+  // Michroma draws ¢ as a bare c and % as o/o.
+  const sym = /[¢%]$/.test(amt) ? amt.slice(-1) : "";
+  amtEl.textContent = sym ? amt.slice(0, -1) : amt;
+  if (sym) {
+    const s = document.createElement("span");
+    s.className = "hero-sym";
+    s.textContent = sym;
+    amtEl.appendChild(s);
+  }
   amtEl.style.fontSize = "";
   setHeroUnit(unitId, unit || "");
   capEl.className =
@@ -619,12 +627,6 @@ function latestYear(id) {
   return ser.years[ser.years.length - 1];
 }
 
-function burdenWindow(printYear, wheelYear, wheelMonth) {
-  if (printYear == null) return null;
-  if (printYear === wheelYear) return { y: printYear, m: wheelMonth || 0 };
-  return { y: printYear, m: 0 };
-}
-
 function renderWage() {
   const row = $("wageRow");
   const note = $("wageNote");
@@ -665,51 +667,51 @@ function renderWage() {
   setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", nowCap);
 }
 
-function burdenView(seriesId) {
+/** Fiscal-year series. The pace is how fast the ratio itself moved, so red on
+ *  debt to GDP means debt outran the economy, and on interest per tax dollar
+ *  it means interest outran taxes. */
+function fiscalView(seriesId) {
   const a0 = personYear(seriesId, state.thenYear);
   const a1 = personYear(seriesId, state.nowYear);
   if (!a0 || !a1) return null;
   if (a0.y === a1.y && state.thenYear === state.nowYear) return null;
   const samePrint = a0.y === a1.y;
-  let ratio;
-  let dollars;
-  if (samePrint) {
-    ratio = 1;
-    dollars = dollarLabel(a1.y, 0);
-  } else {
-    const a = burdenWindow(a0.y, state.thenYear, state.thenMonth);
-    const b = burdenWindow(a1.y, state.nowYear, state.nowMonth);
-    ratio = scale("cpi", a.y, a.m, b.y, b.m);
-    dollars = b ? dollarLabel(b.y, b.m) : "";
-  }
-  if (ratio == null) return null;
-  const expected = a0.v * ratio;
-  let paceText = "";
-  let tone = "";
-  if (!samePrint && expected !== 0) {
-    const gap = ((a1.v - expected) / expected) * 100;
-    const p = paceOverYears(gap, Math.abs(a1.y - a0.y));
-    if (p) {
-      paceText = " · " + p.text;
-      tone = p.tone || "";
-    }
-  }
-  return { a0, a1, expected, dollars, samePrint, paceText, tone };
+  const p =
+    samePrint || !a0.v ? null : paceOverYears((a1.v / a0.v - 1) * 100, Math.abs(a1.y - a0.y));
+  return { a0, a1, samePrint, paceText: p ? " · " + p.text : "", tone: p ? p.tone || "" : "" };
+}
+
+function highBefore(seriesId, year) {
+  const ser = seriesOf(seriesId);
+  if (!ser || !ser.years) return null;
+  let best = null;
+  ser.years.forEach((y, i) => {
+    const v = ser.annual[i];
+    if (y < year && v != null && (!best || v > best.v)) best = { y: y, v: v };
+  });
+  return best;
+}
+
+function cents(n) {
+  return n.toFixed(1) + "¢";
+}
+
+function share(n) {
+  return Math.round(n) + "%";
 }
 
 function renderCounter() {
   const row = $("counter");
   const note = $("debtNote");
-  const b = burdenView("debt_person");
-  if (!row || !b) {
+  const b = fiscalView("debt_person");
+  const g = fiscalView("debt_gdp");
+  if (!row || !b || !g) {
     if (row) row.hidden = true;
     if (note) note.hidden = true;
     return;
   }
   row.hidden = false;
-  if (note) note.hidden = false;
   setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(b.a0.v), "", "Debt · " + b.a0.y);
-  setHeroBay("debtToSide", "debtTo", "debtToUnit", "debtBy", money(b.expected), "", b.dollars);
   setHeroBay(
     "debtActualSide",
     "debtActual",
@@ -717,34 +719,69 @@ function renderCounter() {
     "debtCheck",
     money(b.a1.v),
     "",
-    "Debt · " + b.a1.y + b.paceText,
-    b.tone
+    "Debt · " + b.a1.y + g.paceText,
+    g.tone
   );
+  setHeroBay(
+    "debtToSide",
+    "debtTo",
+    "debtToUnit",
+    "debtBy",
+    share(g.a1.v),
+    "",
+    g.samePrint ? "Of GDP · " + g.a1.y : "Of GDP · " + share(g.a0.v) + " in " + g.a0.y
+  );
+  if (note) {
+    const high = highBefore("debt_gdp", g.a1.y);
+    note.hidden = false;
+    note.textContent =
+      "Each person's share of the federal debt." +
+      (high && high.v > g.a1.v
+        ? " Peak: " + share(high.v) + " of GDP, " + high.y + "."
+        : high
+          ? " A record share of GDP."
+          : "");
+  }
 }
 
-function renderTax() {
-  const row = $("taxRow");
-  const note = $("taxNote");
-  const b = burdenView("tax_person");
+function renderInterest() {
+  const row = $("interestRow");
+  const note = $("interestNote");
+  const b = fiscalView("interest_share");
   if (!row || !b) {
     if (row) row.hidden = true;
     if (note) note.hidden = true;
     return;
   }
   row.hidden = false;
-  if (note) note.hidden = false;
-  setHeroBay("taxFromSide", "taxFrom", "taxFromUnit", "taxFromCap", money(b.a0.v), "", "Tax · " + b.a0.y);
-  setHeroBay("taxToSide", "taxTo", "taxToUnit", "taxBy", money(b.expected), "", b.dollars);
+  const high = highBefore("interest_share", b.a1.y);
+  const record = high && b.a1.v >= high.v;
+  setHeroBay("intFromSide", "intFrom", "intFromUnit", "intFromCap", cents(b.a0.v), "", "Interest · " + b.a0.y);
   setHeroBay(
-    "taxActualSide",
-    "taxActual",
-    "taxActualUnit",
-    "taxCheck",
-    money(b.a1.v),
+    "intActualSide",
+    "intActual",
+    "intActualUnit",
+    "intCheck",
+    cents(b.a1.v),
     "",
-    "Tax · " + b.a1.y + b.paceText,
+    b.a1.y + b.paceText,
     b.tone
   );
+  setHeroBay(
+    "intToSide",
+    "intTo",
+    "intToUnit",
+    "intBy",
+    high ? cents(high.v) : null,
+    "",
+    high ? (record ? "Old high · " : "High · ") + high.y : ""
+  );
+  if (note) {
+    note.hidden = false;
+    note.textContent =
+      "Interest paid from each tax dollar." +
+      (record ? " A record, back to " + seriesOf("interest_share").years[0] + "." : "");
+  }
 }
 
 function plainLine(c, note) {
@@ -909,8 +946,14 @@ function collectChartLines() {
   if (!(ends.t1 > ends.t0)) return [];
   const times = chartSamples(ends);
   if (times.length < 2) return [];
-  const metas = YARDS.map((y) => ({ id: y.series || y.id, name: y.name }));
-  metas.push({ id: "debt_person", name: "Debt" }, { id: "tax_person", name: "Tax" });
+  // With no item picked, the chart is the fiscal read: prices, pay, output,
+  // debt. Thirty gray lines put gold on top and made the debt look ordinary.
+  const shown = state.item === "custom" ? [state.yard, "wage_hourly", "gdp_per_capita"] : null;
+  const metas = YARDS.filter((y) => !shown || shown.includes(y.id)).map((y) => ({
+    id: y.series || y.id,
+    name: y.name,
+  }));
+  metas.push({ id: "debt_person", name: "Debt" });
   const seen = {};
   const cross = crossesM1Break(state.thenYear, state.thenMonth, state.nowYear, state.nowMonth);
   const lines = [];
@@ -965,7 +1008,7 @@ function chartRole(id) {
   if (id === state.item) return "item";
   if (id === "debt_person") return "debt";
   if (id === "wage_hourly") return "wage";
-  if (id === "tax_person") return "tax";
+  if (id === "gdp_per_capita" && state.item === "custom") return "econ";
   return "";
 }
 
@@ -977,7 +1020,7 @@ function roleStroke(role) {
   return "var(--muted)";
 }
 
-/** Yard, the dollar, debt, wage, tax, plus whoever finished highest and lowest. */
+/** Yard, the dollar, debt, wage, output, plus whoever finished highest and lowest. */
 function chartCallouts(lines) {
   const rows = [];
   lines.forEach((line) => {
@@ -991,7 +1034,7 @@ function chartCallouts(lines) {
     });
   });
   let labeled = rows.filter(
-    (d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "tax" || d.role === "item"
+    (d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "econ" || d.role === "item"
   );
   const byEnd = rows.slice().sort((a, b) => b.end - a.end);
   if (byEnd.length) labeled.push(byEnd[0], byEnd[byEnd.length - 1]);
@@ -1194,7 +1237,7 @@ function drawChart(plot, lines) {
       "stroke-linejoin": "round",
       "stroke-linecap": "round",
     });
-    if (role === "tax") path.setAttribute("stroke-dasharray", "3 2");
+    if (role === "econ") path.setAttribute("stroke-dasharray", "3 2");
     const title = svgEl("title", {});
     title.textContent = line.name;
     path.appendChild(title);
@@ -1280,8 +1323,8 @@ function renderAll() {
   const c = compute();
   renderHero(c);
   renderWage();
+  renderInterest();
   renderCounter();
-  renderTax();
   renderChart();
   sizeDrums();
 }
