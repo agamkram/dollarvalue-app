@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 91;
+  --dv-css: 92;
 }
 
 *,
@@ -321,7 +321,7 @@ html.pwa-standalone .fit-stage {
   overflow: hidden;
   font-size: 0.78rem;
   line-height: 1.35;
-  color: var(--text);
+  color: var(--blue);
 }
 
 .plain[hidden] {
@@ -335,7 +335,7 @@ html.pwa-standalone .fit-stage {
   padding: 0 3px;
   font-size: 0.78rem;
   line-height: 1.2;
-  color: var(--text);
+  color: var(--blue);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

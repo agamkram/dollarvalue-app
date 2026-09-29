@@ -1,12 +1,12 @@
 /** Local: stay off. Production: versioned shell, drop leftover caches. */
-const CACHE = "dollarvalue-v91";
+const CACHE = "dollarvalue-v92";
 
 const SHELL = [
   "/",
   "/about.html",
-  "/styles.css?v=91",
-  "/app.js?v=91",
-  "/data/series.json?v=91",
+  "/styles.css?v=92",
+  "/app.js?v=92",
+  "/data/series.json?v=92",
   "/manifest.webmanifest",
   "/favicon.ico",
   "/favicon-32.png",
