@@ -15,7 +15,7 @@
   --accent: #e6c15a;
   --sans: "IBM Plex Sans", system-ui, sans-serif;
   --mono: "IBM Plex Sans", system-ui, sans-serif;
-  --display: "IBM Plex Sans", system-ui, sans-serif;
+  --display: "Michroma", system-ui, sans-serif;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
@@ -28,7 +28,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 105;
+  --dv-css: 104;
 }
 
 *,
