@@ -1,4 +1,4 @@
-const APP_VERSION = "v79";
+const APP_VERSION = "v82";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -57,7 +57,7 @@ const THINGS = [
 ];
 
 const ITEMS = [
-  { id: "custom", name: "Custom $", typed: true, kind: "commodity" },
+  { id: "custom", name: "One dollar", typed: true, kind: "commodity" },
   ...THINGS,
 ];
 
@@ -70,7 +70,6 @@ const state = {
   nowMonth: 0,
   item: "custom",
   yard: "cpi",
-  amount: 1,
   data: null,
 };
 
@@ -168,7 +167,7 @@ function yardMeta() {
 
 function thenAmount() {
   const it = itemMeta();
-  if (it.typed) return state.amount;
+  if (it.typed) return 1;
   return atMonth(seriesOf(it.series || it.id), state.thenYear, state.thenMonth);
 }
 
@@ -852,29 +851,6 @@ function plainLine(c, note) {
   return name + " was " + from + " in " + thenL + " and is " + actual + " in " + nowL + ". It kept pace with " + y + yardSpan + ", which pointed to " + exp + ".";
 }
 
-function amountOptions() {
-  const opts = [{ id: 1, label: "$1" }];
-  for (let n = 10; n <= 5000; n += 10) {
-    opts.push({ id: n, label: "$" + n.toLocaleString("en-US") });
-  }
-  return opts;
-}
-
-function syncAmountDial() {
-  const show = !!itemMeta().typed;
-  const dial = $("amountDial");
-  const row = $("itemRow");
-  dial.hidden = !show;
-  row.classList.toggle("has-amt", show);
-  if (show) {
-    lastDrumH = 0;
-    requestAnimationFrame(() => {
-      sizeDrums();
-      drums.forEach((d) => d.resnap());
-    });
-  }
-}
-
 function chartEnds() {
   const ay = state.thenYear;
   const am = state.thenMonth;
@@ -1001,16 +977,62 @@ function roleStroke(role) {
   return "var(--muted)";
 }
 
+/** Yard, the dollar, debt, wage, tax, plus whoever finished highest and lowest. */
+function chartCallouts(lines) {
+  const rows = [];
+  lines.forEach((line) => {
+    const last = line.pts.filter(Boolean).pop();
+    if (!last) return;
+    rows.push({
+      id: line.id,
+      name: line.name,
+      role: chartRole(line.id),
+      end: last.v / line.base,
+    });
+  });
+  let labeled = rows.filter(
+    (d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "tax" || d.role === "item"
+  );
+  const byEnd = rows.slice().sort((a, b) => b.end - a.end);
+  if (byEnd.length) labeled.push(byEnd[0], byEnd[byEnd.length - 1]);
+  const seen = {};
+  return labeled.filter((d) => {
+    if (seen[d.id]) return false;
+    seen[d.id] = true;
+    return true;
+  });
+}
+
+function measureTextWidths(host, strings, fontSize) {
+  if (!strings.length) return [];
+  const svg = svgEl("svg", { width: "8", height: "8", "aria-hidden": "true" });
+  svg.style.position = "absolute";
+  svg.style.overflow = "hidden";
+  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
+  const nodes = strings.map((s) => {
+    const t = svgEl("text", { x: "0", y: "8", "font-size": String(fontSize) });
+    t.textContent = s;
+    svg.appendChild(t);
+    return t;
+  });
+  host.appendChild(svg);
+  const widths = nodes.map((n) => {
+    try {
+      return n.getComputedTextLength();
+    } catch (err) {
+      return 0;
+    }
+  });
+  svg.remove();
+  return widths;
+}
+
 function drawChart(plot, lines) {
   const w = plot.clientWidth;
   const h = plot.clientHeight;
   if (w < 40 || h < 40) return;
-  const padL = 26;
-  const padR = 92;
   const padT = 8;
   const padB = 16;
-  const plotW = Math.max(10, w - padL - padR);
-  const plotH = Math.max(10, h - padT - padB);
   const ends = chartEnds();
   let lo = Infinity;
   let hi = -Infinity;
@@ -1035,6 +1057,39 @@ function drawChart(plot, lines) {
   const logA = logLo - span * 0.08;
   const logB = logHi + span * 0.08;
 
+  const ticks = [1];
+  let pow = 2;
+  while (pow < hi * 1.05 && ticks.length < 6) {
+    ticks.push(pow);
+    pow *= 2;
+  }
+  pow = 0.5;
+  while (pow > lo * 0.95 && ticks.length < 8) {
+    ticks.push(pow);
+    pow /= 2;
+  }
+  ticks.sort((a, b) => a - b);
+  const shownTicks = ticks.filter((tick) => tick >= Math.exp(logA) && tick <= Math.exp(logB));
+  const callouts = chartCallouts(lines);
+  const tickW = measureTextWidths(
+    plot,
+    shownTicks.map((tick) => (tick < 1 ? String(tick) : String(Math.round(tick)))),
+    9
+  );
+  const nameW = measureTextWidths(
+    plot,
+    callouts.map((d) => chartLabel(d.id, d.name)),
+    10
+  );
+  const maxTick = tickW.reduce((m, n) => Math.max(m, n), 0);
+  const maxName = nameW.reduce((m, n) => Math.max(m, n), 0);
+  // Gutters follow the words actually drawn. A fixed right rail left a blank
+  // strip whenever the longest label was shorter than the worst case.
+  const padL = Math.max(16, Math.min(40, maxTick > 0 ? Math.ceil(maxTick) + 8 : 26));
+  const padR = Math.max(24, Math.min(w * 0.46, maxName > 0 ? Math.ceil(maxName) + 10 : 92));
+  const plotW = Math.max(10, w - padL - padR);
+  const plotH = Math.max(10, h - padT - padB);
+
   function xOf(t) {
     return padL + ((t - ends.t0) / (ends.t1 - ends.t0)) * plotW;
   }
@@ -1052,20 +1107,7 @@ function drawChart(plot, lines) {
   });
   svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
 
-  const ticks = [1];
-  let pow = 2;
-  while (pow < hi * 1.05 && ticks.length < 6) {
-    ticks.push(pow);
-    pow *= 2;
-  }
-  pow = 0.5;
-  while (pow > lo * 0.95 && ticks.length < 8) {
-    ticks.push(pow);
-    pow /= 2;
-  }
-  ticks.sort((a, b) => a - b);
-  ticks.forEach((tick) => {
-    if (tick < Math.exp(logA) || tick > Math.exp(logB)) return;
+  shownTicks.forEach((tick) => {
     const y = yOf(tick);
     svg.appendChild(
       svgEl("line", {
@@ -1168,15 +1210,13 @@ function drawChart(plot, lines) {
     });
   });
 
-  let labeled = drawn.filter((d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "tax" || d.role === "item");
-  const byEnd = drawn.slice().sort((a, b) => b.end - a.end);
-  if (byEnd.length) labeled.push(byEnd[0], byEnd[byEnd.length - 1]);
-  const seenLab = {};
-  labeled = labeled.filter((d) => {
-    if (seenLab[d.id]) return false;
-    seenLab[d.id] = true;
-    return true;
+  const drawnById = {};
+  drawn.forEach((d) => {
+    drawnById[d.id] = d;
   });
+  const labeled = callouts
+    .map((c) => drawnById[c.id])
+    .filter(Boolean);
   labeled.sort((a, b) => a.y - b.y);
   const gap = 13;
   for (let i = 1; i < labeled.length; i++) {
@@ -1243,12 +1283,10 @@ function renderAll() {
   renderCounter();
   renderTax();
   renderChart();
-  syncAmountDial();
   sizeDrums();
 }
 
-function mountDrum(el, options, selectedId, onChange, conf) {
-  const flickGain = (conf && conf.flickGain) || 1;
+function mountDrum(el, options, selectedId, onChange) {
   const ul = document.createElement("ul");
   ul.className = "drum-list";
   options.forEach((opt) => {
@@ -1278,7 +1316,6 @@ function mountDrum(el, options, selectedId, onChange, conf) {
     const kind = /Year$/.test(wheel) ? " year" : /Month$/.test(wheel) ? " month" : "";
     el.setAttribute("aria-label", dialLabel.textContent.trim() + kind);
   }
-  if (flickGain > 1) el.classList.add("drum-fast");
 
   function highlight(id) {
     ul.querySelectorAll("li").forEach((li) => {
@@ -1389,102 +1426,10 @@ function mountDrum(el, options, selectedId, onChange, conf) {
           selectedId = opt.id;
           onChange(opt.id);
         }
-        if (flickGain > 1) {
-          lock = true;
-          scrollToId(opt.id, true);
-          setTimeout(() => {
-            lock = false;
-          }, 220);
-        }
       }, 120);
     },
     { passive: true }
   );
-
-  if (flickGain > 1) {
-    let lastY = 0;
-    let lastT = 0;
-    let vel = 0;
-    let dragging = false;
-    let raf = 0;
-
-    const stopCoast = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
-    };
-
-    const coast = () => {
-      stopCoast();
-      const tick = () => {
-        if (Math.abs(vel) < 0.04) {
-          raf = 0;
-          el.dispatchEvent(new Event("scroll"));
-          return;
-        }
-        el.scrollTop += vel * 16;
-        vel *= 0.955;
-        raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    };
-
-    el.addEventListener(
-      "touchstart",
-      (e) => {
-        stopCoast();
-        dragging = true;
-        lastY = e.touches[0].clientY;
-        lastT = performance.now();
-        vel = 0;
-      },
-      { passive: true }
-    );
-
-    el.addEventListener(
-      "touchmove",
-      (e) => {
-        if (!dragging) return;
-        e.preventDefault();
-        const y = e.touches[0].clientY;
-        const t = performance.now();
-        const dy = lastY - y;
-        const dt = Math.max(8, t - lastT);
-        el.scrollTop += dy * flickGain;
-        vel = (dy * flickGain) / dt;
-        lastY = y;
-        lastT = t;
-      },
-      { passive: false }
-    );
-
-    el.addEventListener(
-      "touchend",
-      () => {
-        dragging = false;
-        coast();
-      },
-      { passive: true }
-    );
-
-    el.addEventListener(
-      "touchcancel",
-      () => {
-        dragging = false;
-        coast();
-      },
-      { passive: true }
-    );
-
-    el.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        stopCoast();
-        el.scrollTop += e.deltaY * flickGain;
-      },
-      { passive: false }
-    );
-  }
 
   function snapNow() {
     lock = true;
@@ -1638,18 +1583,6 @@ function boot(data) {
       state.yard = String(id);
       renderAll();
     })
-  );
-  drums.push(
-    mountDrum(
-      $("drumAmount"),
-      amountOptions(),
-      state.amount,
-      (id) => {
-        state.amount = Number(id);
-        renderAll();
-      },
-      { flickGain: 4 }
-    )
   );
 
   lastDrumH = 0;

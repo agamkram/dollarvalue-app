@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 79;
+  --dv-css: 82;
 }
 
 *,
@@ -125,17 +125,12 @@ html.pwa-standalone .fit-stage {
   min-height: 0;
 }
 
-/* Numbers can scroll. The wheels keep a real height, so a short
-   window (Safari's top domain and bottom pill) cannot crush them. */
+/* Title, rows, and chart stay put. The wheels take whatever height is left. */
 .readout {
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  -webkit-overflow-scrolling: touch;
 }
 
 .topbar {
@@ -371,7 +366,7 @@ html.pwa-standalone .fit-stage {
 
 .dials {
   flex: 1 1 auto;
-  min-height: 18rem;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -395,10 +390,6 @@ html.pwa-standalone .dials {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-}
-
-.dial-row.has-amt {
-  grid-template-columns: 1.15fr 1.15fr 0.72fr;
 }
 
 .dial {
@@ -492,10 +483,6 @@ html.pwa-standalone .dials {
   );
 }
 
-.drum-fast {
-  scroll-snap-type: none;
-}
-
 .drum-list {
   list-style: none;
   margin: 0;
@@ -548,10 +535,6 @@ html.pwa-standalone .dials {
 
 .drum-wide .drum-list li.is-on {
   font-size: 0.78rem;
-}
-
-.dial-amt[hidden] {
-  display: none !important;
 }
 
 .about-body {
