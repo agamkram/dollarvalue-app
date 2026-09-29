@@ -1,4 +1,4 @@
-const APP_VERSION = "v94";
+const APP_VERSION = "v95";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -1158,7 +1158,7 @@ function measureTextWidths(host, strings, fontSize) {
   const svg = svgEl("svg", { width: "8", height: "8", "aria-hidden": "true" });
   svg.style.position = "absolute";
   svg.style.overflow = "hidden";
-  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
+  svg.style.fontFamily = "Public Sans, system-ui, sans-serif";
   const nodes = strings.map((s) => {
     const t = svgEl("text", { x: "0", y: "8", "font-size": String(fontSize) });
     t.textContent = s;
@@ -1255,7 +1255,7 @@ function drawChart(plot, lines) {
     role: "img",
     "aria-label": "Series indexed to 1 at the start, log scale",
   });
-  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
+  svg.style.fontFamily = "Public Sans, system-ui, sans-serif";
 
   shownTicks.forEach((tick) => {
     const y = yOf(tick);

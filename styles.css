@@ -12,7 +12,7 @@
   --green: #3d9a6a;
   --red: #d45b5b;
   --accent: #e6c15a;
-  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --sans: "Public Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
   --display: "Michroma", system-ui, sans-serif;
   --safe-t: env(safe-area-inset-top, 0px);
@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 94;
+  --dv-css: 95;
 }
 
 *,
@@ -232,7 +232,8 @@ html.pwa-standalone .fit-stage {
 
 .hero-amt {
   margin: 0;
-  font-family: var(--display);
+  font-family: var(--sans);
+  font-weight: 600;
   font-size: 2.55rem;
   letter-spacing: -0.03em;
   line-height: 0.95;
