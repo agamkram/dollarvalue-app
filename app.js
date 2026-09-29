@@ -1,4 +1,4 @@
-const APP_VERSION = "v107";
+const APP_VERSION = "v108";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -80,7 +80,10 @@ const ITEMS = [
 
 const YARDS = [...DEFLATORS, ...THINGS];
 
+/** `wheel` is what the wheels say. The top-level dates are what the reading
+ *  uses, set from the wheels by readDates. */
 const state = {
+  wheel: { thenYear: 2000, thenMonth: 0, nowYear: 2025, nowMonth: 0 },
   thenYear: 2000,
   thenMonth: 0,
   nowYear: 2025,
@@ -672,44 +675,37 @@ function sameDate() {
   return state.thenYear === state.nowYear && state.thenMonth === state.nowMonth;
 }
 
-/** Then is the earlier date. The tiles, the sentences, and every per-year rate
- *  read forward in time, so a Now set before Then swaps the two. */
-function orderDates() {
-  const later =
-    state.thenYear > state.nowYear ||
-    (state.thenYear === state.nowYear &&
-      state.thenMonth &&
-      state.nowMonth &&
-      state.thenMonth > state.nowMonth);
-  if (!later) return;
-  const y = state.thenYear;
-  const m = state.thenMonth;
-  state.thenYear = state.nowYear;
-  state.thenMonth = state.nowMonth;
-  state.nowYear = y;
-  state.nowMonth = m;
-  if (thenYearDrum) thenYearDrum.set(state.thenYear, false);
-  if (nowYearDrum) nowYearDrum.set(state.nowYear, false);
-  if (thenMonthDrum) thenMonthDrum.set(state.thenMonth, false);
-  if (nowMonthDrum) nowMonthDrum.set(state.nowMonth, false);
-}
-
-/** Picking something whose numbers stop before the Now year moves Now back to
- *  its last year, so the pick opens on a reading instead of a dash. Scrolling
- *  Now later by hand is left alone. */
-function fitNowToPick() {
+/** The reading's dates, from the wheels. The wheels never move on their own:
+ *  one that jumps mid-drag lands on the wrong year.
+ *  Earlier date first, since the tiles, the sentences, and every per-year rate
+ *  read forward in time. Then, like the debt and interest rows, a later year
+ *  stops at the last one the item and the comparison both have. */
+function readDates() {
+  const w = state.wheel;
+  const flip =
+    w.thenYear > w.nowYear ||
+    (w.thenYear === w.nowYear && w.thenMonth && w.nowMonth && w.thenMonth > w.nowMonth);
+  let ty = flip ? w.nowYear : w.thenYear;
+  let tm = flip ? w.nowMonth : w.thenMonth;
+  let ny = flip ? w.thenYear : w.nowYear;
+  let nm = flip ? w.thenMonth : w.nowMonth;
   const it = itemMeta();
   const yd = yardMeta();
   const ids = [yd.series || yd.id];
   if (!it.typed) ids.push(it.series || it.id);
-  let last = state.nowYear;
+  let last = ny;
   ids.forEach((id) => {
     const y = latestYear(id);
     if (y != null && y < last) last = y;
   });
-  if (last === state.nowYear || last <= state.thenYear) return;
-  state.nowYear = last;
-  if (nowYearDrum) nowYearDrum.set(last);
+  if (last < ny && last > ty) {
+    ny = last;
+    nm = 0;
+  }
+  state.thenYear = ty;
+  state.thenMonth = tm;
+  state.nowYear = ny;
+  state.nowMonth = nm;
 }
 
 function renderWage() {
@@ -1493,8 +1489,8 @@ function syncItemDrum() {
 }
 
 function renderAll() {
-  orderDates();
   syncMonthWheels();
+  readDates();
   syncItemDrum();
   const c = compute();
   renderHero(c);
@@ -1668,10 +1664,10 @@ function mountDrum(el, options, selectedId, onChange) {
   window.addEventListener("resize", snapNow);
 
   return {
-    set(id, smooth) {
+    set(id) {
       selectedId = id;
       lock = true;
-      scrollToId(id, smooth !== false);
+      scrollToId(id, true);
       setTimeout(() => {
         lock = false;
       }, 320);
@@ -1711,8 +1707,6 @@ function yearsList() {
 }
 
 const drums = [];
-let thenYearDrum = null;
-let nowYearDrum = null;
 let thenMonthDrum = null;
 let nowMonthDrum = null;
 
@@ -1741,14 +1735,15 @@ function deadMonths(year) {
 
 function syncMonthWheels() {
   if (!thenMonthDrum || !nowMonthDrum) return;
-  const a = deadMonths(state.thenYear);
-  const b = deadMonths(state.nowYear);
-  if (a.dead.indexOf(state.thenMonth) >= 0) {
-    state.thenMonth = 0;
+  const w = state.wheel;
+  const a = deadMonths(w.thenYear);
+  const b = deadMonths(w.nowYear);
+  if (a.dead.indexOf(w.thenMonth) >= 0) {
+    w.thenMonth = 0;
     thenMonthDrum.set(0);
   }
-  if (b.dead.indexOf(state.nowMonth) >= 0) {
-    state.nowMonth = 0;
+  if (b.dead.indexOf(w.nowMonth) >= 0) {
+    w.nowMonth = 0;
     nowMonthDrum.set(0);
   }
   thenMonthDrum.mark(a.dead, a.annual);
@@ -1762,9 +1757,10 @@ function boot(data) {
   });
   const years = yearsList();
   const last = years[years.length - 1].id;
-  state.nowYear = last;
-  if (last >= 2000) state.thenYear = 2000;
-  else state.thenYear = years[0].id;
+  const w = state.wheel;
+  w.nowYear = last;
+  if (last >= 2000) w.thenYear = 2000;
+  else w.thenYear = years[0].id;
 
   const yOpts = years;
   const mOpts = MONTHS.map((m) => ({ id: m.id, label: m.label }));
@@ -1772,35 +1768,36 @@ function boot(data) {
   const ydOpts = YARDS.map((y) => ({ id: y.id, label: y.name }));
 
   drums.length = 0;
-  thenYearDrum = mountDrum($("drumThenYear"), yOpts, state.thenYear, (id) => {
-    state.thenYear = Number(id);
+  drums.push(
+    mountDrum($("drumThenYear"), yOpts, w.thenYear, (id) => {
+      w.thenYear = Number(id);
+      renderAll();
+    })
+  );
+  drums.push(
+    mountDrum($("drumNowYear"), yOpts, w.nowYear, (id) => {
+      w.nowYear = Number(id);
+      renderAll();
+    })
+  );
+  thenMonthDrum = mountDrum($("drumThenMonth"), mOpts, w.thenMonth, (id) => {
+    w.thenMonth = Number(id);
     renderAll();
   });
-  nowYearDrum = mountDrum($("drumNowYear"), yOpts, state.nowYear, (id) => {
-    state.nowYear = Number(id);
-    renderAll();
-  });
-  drums.push(thenYearDrum, nowYearDrum);
-  thenMonthDrum = mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
-    state.thenMonth = Number(id);
-    renderAll();
-  });
-  nowMonthDrum = mountDrum($("drumNowMonth"), mOpts, state.nowMonth, (id) => {
-    state.nowMonth = Number(id);
+  nowMonthDrum = mountDrum($("drumNowMonth"), mOpts, w.nowMonth, (id) => {
+    w.nowMonth = Number(id);
     renderAll();
   });
   drums.push(thenMonthDrum, nowMonthDrum);
   drums.push(
     mountDrum($("drumItem"), iOpts, state.item, (id) => {
       state.item = String(id);
-      fitNowToPick();
       renderAll();
     })
   );
   drums.push(
     mountDrum($("drumYard"), ydOpts, state.yard, (id) => {
       state.yard = String(id);
-      fitNowToPick();
       renderAll();
     })
   );
