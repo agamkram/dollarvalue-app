@@ -1,4 +1,4 @@
-const APP_VERSION = "v84";
+const APP_VERSION = "v85";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -1102,12 +1102,12 @@ function drawChart(plot, lines) {
 
   const ticks = [1];
   let pow = 2;
-  while (pow < hi * 1.05 && ticks.length < 6) {
+  while (pow < hi * 2 && ticks.length < 6) {
     ticks.push(pow);
     pow *= 2;
   }
   pow = 0.5;
-  while (pow > lo * 0.95 && ticks.length < 8) {
+  while (pow > lo / 2 && ticks.length < 8) {
     ticks.push(pow);
     pow /= 2;
   }

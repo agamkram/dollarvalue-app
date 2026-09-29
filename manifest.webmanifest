@@ -1,7 +1,7 @@
 {
   "name": "DollarValue",
   "short_name": "DollarValue",
-  "description": "What a dollar, a wage, or a gallon of milk is worth — several yardsticks, not just CPI.",
+  "description": "What a dollar or a wage is worth then and now, the federal debt against GDP, and the interest paid from each tax dollar.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07090c",
