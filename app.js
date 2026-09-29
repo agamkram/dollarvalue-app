@@ -1,4 +1,4 @@
-const APP_VERSION = "v88";
+const APP_VERSION = "v89";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -651,14 +651,6 @@ function renderWage() {
   if (note) note.textContent = wageExplain(w0, w1, w0 * ratio, vs, wagePace, ser);
 }
 
-function roseWords(p) {
-  if (!p || p.n == null || !isFinite(p.n)) return "";
-  const n = Math.abs(p.n);
-  const num = (p.perYear === false ? n.toFixed(n >= 10 ? 0 : 1) : n.toFixed(1)) + (p.perYear === false ? "%" : "% a year");
-  if (n < 0.05) return "held flat";
-  return (p.n > 0 ? "rose " : "fell ") + num;
-}
-
 /** The pace stays out of the wage tile. It is how far the wage now sits above
  *  the gold number, per year, and the line under the row says so. */
 function wageExplain(w0, w1, followed, vs, wagePace, ser) {
@@ -681,28 +673,23 @@ function wageExplain(w0, w1, followed, vs, wagePace, ser) {
     (perYear ? " a year " : " ") +
     (above ? "above" : "below") +
     " the " +
-    gold +
-    ".";
+    gold;
   if (perYear && Math.abs(vs) >= 0.05) {
     line +=
-      " Over the whole stretch it is " +
+      ", " +
       Math.abs(vs).toFixed(1) +
       "% " +
       (vs >= 0 ? "higher" : "lower") +
-      ".";
+      " over the whole stretch";
   }
-  const prices = roseWords(yardPace);
-  const pay = roseWords(wageOwn);
-  if (prices && pay) {
-    line += " " + yardName + " " + prices + ". The wage " + pay + ".";
-    if (
-      perYear &&
-      wageOwn.perYear !== false &&
-      yardPace.perYear !== false &&
-      Math.abs(wageOwn.n - yardPace.n).toFixed(1) === rate
-    ) {
-      line += " The " + rate + " is the gap between those two rates.";
-    }
+  line += ".";
+  if (yardPace && wageOwn) {
+    const unit = yardPace.perYear === false ? "%" : "% a year";
+    const bit = (p, withUnit) => {
+      if (Math.abs(p.n) < 0.05) return "held flat";
+      return (p.n > 0 ? "rose " : "fell ") + Math.abs(p.n).toFixed(1) + (withUnit ? unit : "%");
+    };
+    line += " " + yardName + " " + bit(yardPace, true) + ", the wage " + bit(wageOwn, false) + ".";
   }
   return line;
 }
