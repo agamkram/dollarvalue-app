@@ -27,7 +27,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 87;
+  --dv-css: 88;
 }
 
 *,
@@ -343,6 +343,14 @@ html.pwa-standalone .fit-stage {
 
 .row-note[hidden] {
   display: none !important;
+}
+
+.row-note.wraps {
+  white-space: normal;
+  text-overflow: unset;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
 }
 
 .chart {

@@ -1,4 +1,4 @@
-const APP_VERSION = "v87";
+const APP_VERSION = "v88";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -643,19 +643,68 @@ function renderWage() {
   const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
   const vs = ((w1 - w0 * ratio) / (w0 * ratio)) * 100;
   const wagePace = pace(vs, ser);
-  // No name here: the first bay already says which wage this is, and the
-  // repeat pushed this caption onto a second line.
   // Uncolored on purpose. Pay beating prices is not an alarm, and the hot
   // color would print good news in red.
-  // The pace is the gap against the comparison, not the wage's own growth.
-  const nowCap =
-    wageCap(state.nowYear, state.nowMonth) +
-    "\n" +
-    (wagePace ? wagePace.text + " vs " : "vs ") +
-    yardMeta().name;
   setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Production wage · " + wageCap(state.thenYear, state.thenMonth));
   setHeroBay("wageToSide", "wageTo", "wageToUnit", "wageBy", money(w0 * ratio), "", mid);
-  setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", nowCap);
+  setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", wageCap(state.nowYear, state.nowMonth));
+  if (note) note.textContent = wageExplain(w0, w1, w0 * ratio, vs, wagePace, ser);
+}
+
+function roseWords(p) {
+  if (!p || p.n == null || !isFinite(p.n)) return "";
+  const n = Math.abs(p.n);
+  const num = (p.perYear === false ? n.toFixed(n >= 10 ? 0 : 1) : n.toFixed(1)) + (p.perYear === false ? "%" : "% a year");
+  if (n < 0.05) return "held flat";
+  return (p.n > 0 ? "rose " : "fell ") + num;
+}
+
+/** The pace stays out of the wage tile. It is how far the wage now sits above
+ *  the gold number, per year, and the line under the row says so. */
+function wageExplain(w0, w1, followed, vs, wagePace, ser) {
+  const actual = money(w1);
+  const gold = money(followed);
+  const yard = yardMeta();
+  const yardPace = seriesPace(yard.series || yard.id);
+  const wageOwn = pace(((w1 - w0) / w0) * 100, ser);
+  const yardName = yard.id === "cpi" ? "Prices" : yard.name;
+  if (!wagePace || !isFinite(vs)) return "What an hour of work paid.";
+  const rate = Math.abs(wagePace.n).toFixed(1);
+  const perYear = wagePace.perYear !== false;
+  const above = wagePace.n >= 0;
+  let line =
+    "The " +
+    actual +
+    " is " +
+    rate +
+    "%" +
+    (perYear ? " a year " : " ") +
+    (above ? "above" : "below") +
+    " the " +
+    gold +
+    ".";
+  if (perYear && Math.abs(vs) >= 0.05) {
+    line +=
+      " Over the whole stretch it is " +
+      Math.abs(vs).toFixed(1) +
+      "% " +
+      (vs >= 0 ? "higher" : "lower") +
+      ".";
+  }
+  const prices = roseWords(yardPace);
+  const pay = roseWords(wageOwn);
+  if (prices && pay) {
+    line += " " + yardName + " " + prices + ". The wage " + pay + ".";
+    if (
+      perYear &&
+      wageOwn.perYear !== false &&
+      yardPace.perYear !== false &&
+      Math.abs(wageOwn.n - yardPace.n).toFixed(1) === rate
+    ) {
+      line += " The " + rate + " is the gap between those two rates.";
+    }
+  }
+  return line;
 }
 
 /** Fiscal-year series. The pace is how fast the ratio itself moved, so red on
