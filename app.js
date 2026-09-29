@@ -1,4 +1,4 @@
-const APP_VERSION = "v95";
+const APP_VERSION = "v104";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -488,7 +488,7 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
     return;
   }
   side.classList.remove("is-empty");
-  // Michroma draws ¢ as a bare c and % as o/o.
+  // Plex draws ¢ and % fine; keep the span so Michroma title never leaks in.
   const sym = /[¢%]$/.test(amt) ? amt.slice(-1) : "";
   amtEl.textContent = sym ? amt.slice(0, -1) : amt;
   if (sym) {
@@ -1117,6 +1117,9 @@ function roleStroke(role) {
   if (role === "yard") return "var(--gold)";
   if (role === "item") return "var(--blue)";
   if (role === "debt") return "var(--red)";
+  if (role === "wage") return "var(--text)";
+  if (role === "econ") return "var(--green)";
+  if (role === "interest") return "var(--teal)";
   if (role) return "var(--text)";
   return "var(--muted)";
 }
@@ -1158,7 +1161,7 @@ function measureTextWidths(host, strings, fontSize) {
   const svg = svgEl("svg", { width: "8", height: "8", "aria-hidden": "true" });
   svg.style.position = "absolute";
   svg.style.overflow = "hidden";
-  svg.style.fontFamily = "Public Sans, system-ui, sans-serif";
+  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
   const nodes = strings.map((s) => {
     const t = svgEl("text", { x: "0", y: "8", "font-size": String(fontSize) });
     t.textContent = s;
@@ -1255,7 +1258,7 @@ function drawChart(plot, lines) {
     role: "img",
     "aria-label": "Series indexed to 1 at the start, log scale",
   });
-  svg.style.fontFamily = "Public Sans, system-ui, sans-serif";
+  svg.style.fontFamily = "IBM Plex Sans, system-ui, sans-serif";
 
   shownTicks.forEach((tick) => {
     const y = yOf(tick);
@@ -1344,7 +1347,6 @@ function drawChart(plot, lines) {
       "stroke-linejoin": "round",
       "stroke-linecap": "round",
     });
-    if (role === "econ" || role === "interest") path.setAttribute("stroke-dasharray", "3 2");
     const title = svgEl("title", {});
     title.textContent = line.name;
     path.appendChild(title);

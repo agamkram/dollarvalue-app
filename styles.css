@@ -10,10 +10,11 @@
   --gold-dim: rgba(230, 193, 90, 0.16);
   --blue: #6cb2f2;
   --green: #3d9a6a;
+  --teal: #4eb8c4;
   --red: #d45b5b;
   --accent: #e6c15a;
-  --sans: "Public Sans", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Sans", system-ui, sans-serif;
   --display: "Michroma", system-ui, sans-serif;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -27,7 +28,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 95;
+  --dv-css: 104;
 }
 
 *,
@@ -199,7 +200,7 @@ html.pwa-standalone .fit-stage {
 .hero {
   flex-shrink: 0;
   height: auto;
-  min-height: 54px;
+  min-height: 61px;
   box-sizing: border-box;
   display: flex;
   gap: 3px;
@@ -217,8 +218,8 @@ html.pwa-standalone .fit-stage {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  padding: 2px 2px 2px;
+  gap: 2px;
+  padding: 3px 3px 2px;
   text-align: center;
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -233,7 +234,7 @@ html.pwa-standalone .fit-stage {
 .hero-amt {
   margin: 0;
   font-family: var(--sans);
-  font-weight: 600;
+  font-weight: 400;
   font-size: 2.55rem;
   letter-spacing: -0.03em;
   line-height: 0.95;
@@ -265,7 +266,7 @@ html.pwa-standalone .fit-stage {
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.2;
-  font-weight: 500;
+  font-weight: 300;
   color: var(--text);
   text-align: center;
   white-space: normal;
@@ -301,7 +302,7 @@ html.pwa-standalone .fit-stage {
 }
 
 .hero-counter {
-  min-height: 42px;
+  min-height: 47px;
 }
 
 .hero-counter .hero-amt {
@@ -321,6 +322,7 @@ html.pwa-standalone .fit-stage {
   max-height: 5.6em;
   overflow: hidden;
   font-size: 0.78rem;
+  font-weight: 300;
   line-height: 1.35;
   color: var(--blue);
 }
@@ -335,6 +337,7 @@ html.pwa-standalone .fit-stage {
   margin: 0;
   padding: 0 3px;
   font-size: 0.78rem;
+  font-weight: 300;
   line-height: 1.2;
   color: var(--blue);
   white-space: nowrap;
