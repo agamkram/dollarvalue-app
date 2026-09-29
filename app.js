@@ -1,4 +1,4 @@
-const APP_VERSION = "v92";
+const APP_VERSION = "v93";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -41,6 +41,22 @@ const THINGS = [
   { id: "spend_hh", name: "Household spending", series: "spend_hh", kind: "expenditure" },
   { id: "gdp_per_capita", name: "GDP per capita", series: "gdp_per_capita", kind: "income" },
   { id: "gdp", name: "GDP", series: "gdp", kind: "output", dollars: false, unit: "billion" },
+  {
+    id: "interest_share",
+    name: "Interest / tax $",
+    series: "interest_share",
+    kind: "ratio",
+    dollars: false,
+    format: "cents",
+  },
+  {
+    id: "debt_gdp",
+    name: "Debt to GDP",
+    series: "debt_gdp",
+    kind: "ratio",
+    dollars: false,
+    format: "pct",
+  },
   { id: "m2", name: "M2", series: "m2", kind: "money", dollars: false, unit: "billion" },
   { id: "m1", name: "M1", series: "m1", kind: "money", dollars: false, unit: "billion" },
   { id: "base", name: "Monetary base", series: "base", kind: "money", dollars: false, unit: "billion" },
@@ -146,6 +162,14 @@ function money(n, digits) {
     maximumFractionDigits: max,
   });
   return (n < 0 ? "-$" : "$") + s;
+}
+
+function cents(n) {
+  return n.toFixed(1) + "¢";
+}
+
+function share(n) {
+  return Math.round(n) + "%";
 }
 
 function pct(n) {
@@ -324,9 +348,16 @@ function paceOverYears(vs, years) {
   };
 }
 
-function fmtPlain(n, dollars) {
+function fmtPlain(n, meta) {
   if (n == null || !isFinite(n)) return "—";
-  return dollars === false ? fmtMeasure(n) : money(n);
+  if (meta === true || meta == null) return money(n);
+  if (meta === false) return fmtMeasure(n);
+  if (typeof meta === "object") {
+    if (meta.format === "cents") return cents(n);
+    if (meta.format === "pct") return share(n);
+    if (meta.dollars === false) return fmtMeasure(n);
+  }
+  return money(n);
 }
 
 function compute() {
@@ -480,9 +511,13 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
 }
 
 function renderHero(c) {
-  const unit = c.it.typed ? "" : c.it.unit || "";
+  const unit = c.it.typed || c.it.format ? "" : c.it.unit || "";
   const itemSer = c.it.typed ? null : seriesOf(c.it.series || c.it.id);
-  const showFrom = c.it.typed ? fmtPlain(c.from, c.it.dollars) : c.from == null ? "—" : fmtPlain(c.from, c.it.dollars);
+  const showFrom = c.it.typed
+    ? fmtPlain(c.from, true)
+    : c.from == null
+      ? "—"
+      : fmtPlain(c.from, c.it);
 
   setHeroBay(
     "heroFromSide",
@@ -499,7 +534,7 @@ function renderHero(c) {
     "heroTo",
     "heroToUnit",
     "heroBy",
-    c.expected == null ? "—" : fmtPlain(c.expected, c.it.dollars),
+    c.expected == null ? "—" : fmtPlain(c.expected, c.it.typed ? true : c.it),
     unit,
     c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.series || c.yd.id))
   );
@@ -544,7 +579,7 @@ function renderHero(c) {
       "heroActual",
       "heroActualUnit",
       "heroCheck",
-      c.actual == null ? "—" : fmtPlain(c.actual, c.it.dollars),
+      c.actual == null ? "—" : fmtPlain(c.actual, c.it),
       unit,
       c.actual != null && paceNow ? prefix + paceNow.text : "Actual",
       paceNow ? paceNow.tone : ""
@@ -719,21 +754,24 @@ function highBefore(seriesId, year) {
   return best;
 }
 
-function cents(n) {
-  return n.toFixed(1) + "¢";
-}
-
-function share(n) {
-  return Math.round(n) + "%";
-}
-
 function renderCounter() {
   const row = $("counter");
   const note = $("debtNote");
+  if (
+    !row ||
+    state.item === "debt_gdp" ||
+    state.yard === "debt_gdp" ||
+    state.item === "debt_person" ||
+    state.yard === "debt_person"
+  ) {
+    if (row) row.hidden = true;
+    if (note) note.hidden = true;
+    return;
+  }
   const b = fiscalView("debt_person");
   const g = fiscalView("debt_gdp");
-  if (!row || !b || !g) {
-    if (row) row.hidden = true;
+  if (!b || !g) {
+    row.hidden = true;
     if (note) note.hidden = true;
     return;
   }
@@ -774,9 +812,14 @@ function renderCounter() {
 function renderInterest() {
   const row = $("interestRow");
   const note = $("interestNote");
-  const b = fiscalView("interest_share");
-  if (!row || !b) {
+  if (!row || state.item === "interest_share" || state.yard === "interest_share") {
     if (row) row.hidden = true;
+    if (note) note.hidden = true;
+    return;
+  }
+  const b = fiscalView("interest_share");
+  if (!b) {
+    row.hidden = true;
     if (note) note.hidden = true;
     return;
   }
@@ -822,7 +865,7 @@ function plainLine(c, note) {
   const yardSpan =
     yardThen === thenL && yardNow === nowL ? "" : " from " + yardThen + " to " + yardNow;
   if (c.expected == null) return note || "No comparison for these dates.";
-  const exp = fmtPlain(c.expected, c.it.typed ? true : c.it.dollars);
+  const exp = fmtPlain(c.expected, c.it.typed ? true : c.it);
   const y = c.yd.name;
   if (c.it.typed) {
     const amt = fmtPlain(c.from, true);
@@ -857,6 +900,30 @@ function plainLine(c, note) {
     if (c.yd.id === "wage_hourly") {
       return amt + " in " + thenL + " paid for a certain amount of work. That work pays " + exp + " in " + nowL + ".";
     }
+    if (c.yd.id === "interest_share") {
+      return (
+        amt +
+        " in " +
+        thenL +
+        " would be " +
+        exp +
+        " in " +
+        nowL +
+        " if it had grown with interest paid from each tax dollar."
+      );
+    }
+    if (c.yd.id === "debt_gdp") {
+      return (
+        amt +
+        " in " +
+        thenL +
+        " would be " +
+        exp +
+        " in " +
+        nowL +
+        " if it had grown with the federal debt as a share of GDP."
+      );
+    }
     if (c.yd.stick) {
       return amt + " in " + thenL + " bought a certain amount of " + y.toLowerCase() + ". The same amount costs " + exp + " in " + nowL + ".";
     }
@@ -872,8 +939,8 @@ function plainLine(c, note) {
     return amt + " in " + thenL + " bought a certain amount of " + y.toLowerCase() + ". The same amount costs " + exp + " in " + nowL + ".";
   }
   if (c.actual == null) return note || c.it.name + " has no reading for " + nowL + ".";
-  const from = fmtPlain(c.from, c.it.dollars);
-  const actual = fmtPlain(c.actual, c.it.dollars);
+  const from = fmtPlain(c.from, c.it);
+  const actual = fmtPlain(c.actual, c.it);
   const name = c.it.name;
   if (c.it.id === c.yd.id) {
     return name + " is the measure, so " + from + " in " + thenL + " becomes " + actual + " in " + nowL + ".";
@@ -974,8 +1041,12 @@ function collectChartLines() {
   const times = chartSamples(ends);
   if (times.length < 2) return [];
   // With no item picked, the chart is the fiscal read: prices, pay, output,
-  // debt. Thirty gray lines put gold on top and made the debt look ordinary.
-  const shown = state.item === "custom" ? [state.yard, "wage_hourly", "gdp_per_capita"] : null;
+  // debt, and interest. Thirty gray lines put gold on top and made the debt
+  // look ordinary.
+  const shown =
+    state.item === "custom"
+      ? [state.yard, "wage_hourly", "gdp_per_capita", "interest_share"]
+      : null;
   const metas = YARDS.filter((y) => !shown || shown.includes(y.id)).map((y) => ({
     id: y.series || y.id,
     name: y.name,
@@ -1021,6 +1092,8 @@ function chartLabel(id, name) {
   if (id === "income_hh") return "Income";
   if (id === "spend_hh") return "Spending";
   if (id === "gdp_per_capita") return "GDP / person";
+  if (id === "interest_share") return "Interest";
+  if (id === "debt_gdp") return "Debt / GDP";
   if (id === "gdp_deflator") return "Deflator";
   if (id === "chained_cpi") return "Chained CPI";
   if (id === "homes_msp") return "Home";
@@ -1034,6 +1107,7 @@ function chartRole(id) {
   if (id === state.yard) return "yard";
   if (id === state.item) return "item";
   if (id === "debt_person") return "debt";
+  if (id === "interest_share") return "interest";
   if (id === "wage_hourly") return "wage";
   if (id === "gdp_per_capita" && state.item === "custom") return "econ";
   return "";
@@ -1061,7 +1135,13 @@ function chartCallouts(lines) {
     });
   });
   let labeled = rows.filter(
-    (d) => d.role === "yard" || d.role === "debt" || d.role === "wage" || d.role === "econ" || d.role === "item"
+    (d) =>
+      d.role === "yard" ||
+      d.role === "debt" ||
+      d.role === "wage" ||
+      d.role === "econ" ||
+      d.role === "interest" ||
+      d.role === "item"
   );
   const byEnd = rows.slice().sort((a, b) => b.end - a.end);
   if (byEnd.length) labeled.push(byEnd[0], byEnd[byEnd.length - 1]);
@@ -1264,7 +1344,7 @@ function drawChart(plot, lines) {
       "stroke-linejoin": "round",
       "stroke-linecap": "round",
     });
-    if (role === "econ") path.setAttribute("stroke-dasharray", "3 2");
+    if (role === "econ" || role === "interest") path.setAttribute("stroke-dasharray", "3 2");
     const title = svgEl("title", {});
     title.textContent = line.name;
     path.appendChild(title);
