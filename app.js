@@ -1,4 +1,4 @@
-const APP_VERSION = "v85";
+const APP_VERSION = "v87";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -470,7 +470,13 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
   setHeroUnit(unitId, unit || "");
   capEl.className =
     "hero-cap" + (hot === "hot" ? " is-hot" : hot === "cool" ? " is-cool" : "");
-  capEl.textContent = cap || "";
+  capEl.textContent = "";
+  String(cap || "")
+    .split("\n")
+    .forEach((line, i) => {
+      if (i) capEl.appendChild(document.createElement("br"));
+      capEl.appendChild(document.createTextNode(line));
+    });
 }
 
 function renderHero(c) {
@@ -606,21 +612,6 @@ function personYear(id, year) {
   return { y: y, v: v };
 }
 
-function priceYearLabel(year, month, ser) {
-  if (month) return MONTHS[month].label + " " + year;
-  const kind = yearKind(ser, year);
-  if (kind === "ytd") return year + " YTD";
-  if (kind === "partial") return year + " partial";
-  return String(year);
-}
-
-function dollarLabel(year, month) {
-  const ser = seriesOf("cpi");
-  const y = year == null ? state.nowYear : year;
-  const m = month == null ? state.nowMonth : month;
-  return (state.yard === "cpi" ? "" : "CPI, ") + priceYearLabel(y, m, ser) + " dollars";
-}
-
 function latestYear(id) {
   const ser = seriesOf(id);
   if (!ser || !ser.years || !ser.years.length) return null;
@@ -646,11 +637,7 @@ function renderWage() {
     return;
   }
   const ser = seriesOf("wage_hourly");
-  const yardSer = seriesOf(state.yard);
-  const mid =
-    state.yard === "cpi"
-      ? dollarLabel()
-      : yardMeta().name + " · " + whenLabel(state.nowYear, state.nowMonth, yardSer);
+  const mid = "Followed " + yardMeta().name;
   row.hidden = false;
   if (note) note.hidden = false;
   const wageCap = (year, month) => whenLabel(year, month, ser).replace(/ avg$/, "");
@@ -660,8 +647,12 @@ function renderWage() {
   // repeat pushed this caption onto a second line.
   // Uncolored on purpose. Pay beating prices is not an alarm, and the hot
   // color would print good news in red.
+  // The pace is the gap against the comparison, not the wage's own growth.
   const nowCap =
-    wageCap(state.nowYear, state.nowMonth) + (wagePace ? " · " + wagePace.text : "");
+    wageCap(state.nowYear, state.nowMonth) +
+    "\n" +
+    (wagePace ? wagePace.text + " vs " : "vs ") +
+    yardMeta().name;
   setHeroBay("wageFromSide", "wageFrom", "wageFromUnit", "wageFromCap", money(w0), "", "Production wage · " + wageCap(state.thenYear, state.thenMonth));
   setHeroBay("wageToSide", "wageTo", "wageToUnit", "wageBy", money(w0 * ratio), "", mid);
   setHeroBay("wageActualSide", "wageActual", "wageActualUnit", "wageCheck", money(w1), "", nowCap);
