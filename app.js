@@ -1,4 +1,4 @@
-const APP_VERSION = "v104";
+const APP_VERSION = "v105";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -488,7 +488,7 @@ function setHeroBay(sideId, amtId, unitId, capId, amt, unit, cap, hot) {
     return;
   }
   side.classList.remove("is-empty");
-  // Plex draws ¢ and % fine; keep the span so Michroma title never leaks in.
+  // ¢ and % sit in a span so the display face never mangled them.
   const sym = /[¢%]$/.test(amt) ? amt.slice(-1) : "";
   amtEl.textContent = sym ? amt.slice(0, -1) : amt;
   if (sym) {
