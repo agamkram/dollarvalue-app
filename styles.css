@@ -28,7 +28,7 @@
   --vv-h: 100%;
   --drum-h: 6.6rem;
   --row-h: 1.32rem;
-  --dv-css: 106;
+  --dv-css: 107;
 }
 
 *,
@@ -126,9 +126,12 @@ html.pwa-standalone .fit-stage {
   min-height: 0;
 }
 
-/* Title, rows, and chart stay put. The wheels take whatever height is left. */
+/* Title, rows, and chart stay put. The wheels take whatever height is left,
+   but never less than three rows each; on a short phone the chart gives way. */
 .readout {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -359,7 +362,7 @@ html.pwa-standalone .fit-stage {
 
 .chart {
   flex: 0 1 156px;
-  min-height: 112px;
+  min-height: 64px;
   max-height: 176px;
   display: flex;
   flex-direction: column;
@@ -383,8 +386,8 @@ html.pwa-standalone .fit-stage {
 }
 
 .dials {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 1 0;
+  min-height: calc(6 * var(--row-h) + 48px);
   display: flex;
   flex-direction: column;
   gap: 6px;

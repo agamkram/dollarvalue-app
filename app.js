@@ -1,4 +1,4 @@
-const APP_VERSION = "v106";
+const APP_VERSION = "v107";
 
 const MONTHS = [
   { id: 0, label: "Year" },
@@ -23,13 +23,14 @@ const DEFLATORS = [
   { id: "gdp_deflator", name: "GDP deflator", hint: "All output, not just households" },
 ];
 
-/** Shared on Item and In terms of. Deflators sit only on In terms of. */
+/** Shared on Item and In terms of. Deflators sit only on In terms of.
+ *  `cost` marks what a household pays for; only those color the top row. */
 const THINGS = [
-  { id: "milk", name: "Milk", unit: "/gal", series: "milk", kind: "commodity" },
-  { id: "eggs", name: "Eggs", unit: "/doz", series: "eggs", kind: "commodity" },
-  { id: "coffee", name: "Coffee", unit: "/lb", series: "coffee", kind: "commodity" },
-  { id: "gasoline", name: "Gasoline", unit: "/gal", series: "gasoline", kind: "commodity" },
-  { id: "electricity", name: "Electricity", unit: "/kWh", series: "electricity", kind: "commodity" },
+  { id: "milk", name: "Milk", unit: "/gal", series: "milk", kind: "commodity", cost: true },
+  { id: "eggs", name: "Eggs", unit: "/doz", series: "eggs", kind: "commodity", cost: true },
+  { id: "coffee", name: "Coffee", unit: "/lb", series: "coffee", kind: "commodity", cost: true },
+  { id: "gasoline", name: "Gasoline", unit: "/gal", series: "gasoline", kind: "commodity", cost: true },
+  { id: "electricity", name: "Electricity", unit: "/kWh", series: "electricity", kind: "commodity", cost: true },
   { id: "wti", name: "WTI oil", unit: "/bbl", series: "wti", kind: "commodity" },
   { id: "wheat", name: "Wheat", unit: "/mt", series: "wheat", kind: "commodity" },
   { id: "corn", name: "Corn", unit: "/mt", series: "corn", kind: "commodity" },
@@ -63,10 +64,10 @@ const THINGS = [
   { id: "homes_msp", name: "Median home", series: "homes_msp", kind: "asset" },
   { id: "homes_cs", name: "Home price CS", series: "homes_cs", kind: "index", dollars: false },
   { id: "homes_fhfa", name: "Home price FHFA", series: "homes_fhfa", kind: "index", dollars: false },
-  { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false },
-  { id: "college", name: "College index", series: "college", kind: "index", dollars: false },
-  { id: "medical", name: "Medical services", series: "medical", kind: "index", dollars: false },
-  { id: "used_cars", name: "Used car index", series: "used_cars", kind: "index", dollars: false },
+  { id: "rent", name: "Rent index", series: "rent", kind: "index", dollars: false, cost: true },
+  { id: "college", name: "College index", series: "college", kind: "index", dollars: false, cost: true },
+  { id: "medical", name: "Medical services", series: "medical", kind: "index", dollars: false, cost: true },
+  { id: "used_cars", name: "Used car index", series: "used_cars", kind: "index", dollars: false, cost: true },
   { id: "nasdaq", name: "NASDAQ", series: "nasdaq", kind: "index", dollars: false },
   { id: "stocks", name: "S&P 500", series: "stocks", kind: "index", dollars: false },
   { id: "djia", name: "Dow Jones", series: "djia", kind: "index", dollars: false },
@@ -397,6 +398,10 @@ function compute() {
     if (from != null && px0) u0 = from / px0;
     if (nowDollars != null && px1) u1 = nowDollars / px1;
   }
+  // A share compares only with itself. Prices do not carry a percent of GDP.
+  if (it.kind === "ratio" && yd.id !== it.id) {
+    return { it, yd, from, ratio: null, expected: null, actual, vs: null, u0: null, u1: null, own: true };
+  }
   return { it, yd, from, ratio, expected, actual, vs, u0, u1 };
 }
 
@@ -534,7 +539,7 @@ function renderHero(c) {
     "heroTo",
     "heroToUnit",
     "heroBy",
-    c.expected == null ? "—" : fmtPlain(c.expected, c.it.typed ? true : c.it),
+    c.own ? null : c.expected == null ? "—" : fmtPlain(c.expected, c.it.typed ? true : c.it),
     unit,
     c.yd.name + " · " + whenLabel(state.nowYear, state.nowMonth, seriesOf(c.yd.series || c.yd.id))
   );
@@ -548,11 +553,14 @@ function renderHero(c) {
   );
   const m1Note =
     (c.yd.id === "m1" || isM1(c.it)) && m1Cross ? "M1 redefined May 2020" : "";
-  const note =
-    m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
+  const note = c.own
+    ? explainGap(itemSer, c.it.name)
+    : m1Note || explainGap(yardSer, c.yd.name) || explainGap(itemSer, c.it.name);
+  const plainText = plainLine(c, note);
   const measure = $("heroMeasure");
   if (note) {
-    measure.hidden = false;
+    // With no reading, the sentence under it already is the note.
+    measure.hidden = plainText === note;
     measure.textContent = note;
   } else if (c.yd.stick && c.it.dollars !== false) {
     measure.hidden = false;
@@ -571,7 +579,14 @@ function renderHero(c) {
 
   if (!c.it.typed) {
     const kind = !state.nowMonth ? yearKind(itemSer, state.nowYear) : "plain";
-    const paceNow = pace(c.vs);
+    const paceNow = c.own
+      ? c.from && c.actual != null
+        ? pace((c.actual / c.from - 1) * 100, itemSer)
+        : null
+      : pace(c.vs);
+    // Red means it outran the comparison. That is bad news only for what a
+    // household pays, and for debt and interest. Pay or a stock doing it is not.
+    const colored = c.it.cost || c.own;
     const prefix =
       kind === "ytd" ? "Actual YTD · " : kind === "partial" ? "Actual partial · " : "Actual · ";
     setHeroBay(
@@ -582,13 +597,13 @@ function renderHero(c) {
       c.actual == null ? "—" : fmtPlain(c.actual, c.it),
       unit,
       c.actual != null && paceNow ? prefix + paceNow.text : "Actual",
-      paceNow ? paceNow.tone : ""
+      paceNow && colored ? paceNow.tone : ""
     );
   } else {
     setHeroBay("heroActualSide", "heroActual", "heroActualUnit", "heroCheck", null);
   }
 
-  $("plain").textContent = plainLine(c, note);
+  $("plain").textContent = plainText;
   requestAnimationFrame(fitHeroAmts);
 }
 
@@ -653,6 +668,50 @@ function latestYear(id) {
   return ser.years[ser.years.length - 1];
 }
 
+function sameDate() {
+  return state.thenYear === state.nowYear && state.thenMonth === state.nowMonth;
+}
+
+/** Then is the earlier date. The tiles, the sentences, and every per-year rate
+ *  read forward in time, so a Now set before Then swaps the two. */
+function orderDates() {
+  const later =
+    state.thenYear > state.nowYear ||
+    (state.thenYear === state.nowYear &&
+      state.thenMonth &&
+      state.nowMonth &&
+      state.thenMonth > state.nowMonth);
+  if (!later) return;
+  const y = state.thenYear;
+  const m = state.thenMonth;
+  state.thenYear = state.nowYear;
+  state.thenMonth = state.nowMonth;
+  state.nowYear = y;
+  state.nowMonth = m;
+  if (thenYearDrum) thenYearDrum.set(state.thenYear, false);
+  if (nowYearDrum) nowYearDrum.set(state.nowYear, false);
+  if (thenMonthDrum) thenMonthDrum.set(state.thenMonth, false);
+  if (nowMonthDrum) nowMonthDrum.set(state.nowMonth, false);
+}
+
+/** Picking something whose numbers stop before the Now year moves Now back to
+ *  its last year, so the pick opens on a reading instead of a dash. Scrolling
+ *  Now later by hand is left alone. */
+function fitNowToPick() {
+  const it = itemMeta();
+  const yd = yardMeta();
+  const ids = [yd.series || yd.id];
+  if (!it.typed) ids.push(it.series || it.id);
+  let last = state.nowYear;
+  ids.forEach((id) => {
+    const y = latestYear(id);
+    if (y != null && y < last) last = y;
+  });
+  if (last === state.nowYear || last <= state.thenYear) return;
+  state.nowYear = last;
+  if (nowYearDrum) nowYearDrum.set(last);
+}
+
 function renderWage() {
   const row = $("wageRow");
   const note = $("wageNote");
@@ -660,7 +719,8 @@ function renderWage() {
     if (row) row.hidden = true;
     if (note) note.hidden = true;
   };
-  if (!row || state.item === "wage_hourly" || state.yard === "wage_hourly") {
+  // A wage carried forward by a share of GDP or of taxes is not an amount.
+  if (!row || state.item === "wage_hourly" || state.yard === "wage_hourly" || yardMeta().kind === "ratio") {
     hide();
     return;
   }
@@ -695,7 +755,7 @@ function wageExplain(w0, w1, followed, vs, wagePace, ser) {
   const yardPace = seriesPace(yard.series || yard.id);
   const wageOwn = pace(((w1 - w0) / w0) * 100, ser);
   const yardName = yard.id === "cpi" ? "Prices" : yard.name;
-  if (!wagePace || !isFinite(vs)) return "What an hour of work paid.";
+  if (!wagePace || !isFinite(vs) || sameDate()) return "What an hour of work paid.";
   const rate = Math.abs(wagePace.n).toFixed(1);
   const perYear = wagePace.perYear !== false;
   const above = wagePace.n >= 0;
@@ -777,16 +837,8 @@ function renderCounter() {
   }
   row.hidden = false;
   setHeroBay("debtFromSide", "debtFrom", "debtFromUnit", "debtFromCap", money(b.a0.v), "", "Debt · " + b.a0.y);
-  setHeroBay(
-    "debtActualSide",
-    "debtActual",
-    "debtActualUnit",
-    "debtCheck",
-    money(b.a1.v),
-    "",
-    "Debt · " + b.a1.y + g.paceText,
-    g.tone
-  );
+  setHeroBay("debtActualSide", "debtActual", "debtActualUnit", "debtCheck", money(b.a1.v), "", "Debt · " + b.a1.y);
+  // The pace and its color are debt to GDP's, so they sit on the GDP tile.
   setHeroBay(
     "debtToSide",
     "debtTo",
@@ -794,7 +846,10 @@ function renderCounter() {
     "debtBy",
     share(g.a1.v),
     "",
-    g.samePrint ? "Of GDP · " + g.a1.y : "Of GDP · " + share(g.a0.v) + " in " + g.a0.y
+    g.samePrint
+      ? "Of GDP · " + g.a1.y
+      : "Of GDP · " + share(g.a0.v) + " in " + g.a0.y + (g.paceText ? "\n" + g.paceText.slice(3) : ""),
+    g.tone
   );
   if (note) {
     const high = highBefore("debt_gdp", g.a1.y);
@@ -864,6 +919,17 @@ function plainLine(c, note) {
   const yardNow = plainWhen(state.nowYear, state.nowMonth, yardSer);
   const yardSpan =
     yardThen === thenL && yardNow === nowL ? "" : " from " + yardThen + " to " + yardNow;
+  if (sameDate()) return "Pick two different dates.";
+  if (c.own) {
+    if (c.from == null || c.actual == null) return note || "No comparison for these dates.";
+    const was = fmtPlain(c.from, c.it);
+    const is = fmtPlain(c.actual, c.it);
+    const moved =
+      was === is
+        ? " was " + was + " in " + thenL + " and is still " + is + " in " + nowL
+        : (c.actual > c.from ? " rose" : " fell") + " from " + was + " in " + thenL + " to " + is + " in " + nowL;
+    return c.it.name + moved + ". A share is not carried forward by " + c.yd.name + ".";
+  }
   if (c.expected == null) return note || "No comparison for these dates.";
   const exp = fmtPlain(c.expected, c.it.typed ? true : c.it);
   const y = c.yd.name;
@@ -1427,6 +1493,7 @@ function syncItemDrum() {
 }
 
 function renderAll() {
+  orderDates();
   syncMonthWheels();
   syncItemDrum();
   const c = compute();
@@ -1601,10 +1668,10 @@ function mountDrum(el, options, selectedId, onChange) {
   window.addEventListener("resize", snapNow);
 
   return {
-    set(id) {
+    set(id, smooth) {
       selectedId = id;
       lock = true;
-      scrollToId(id, true);
+      scrollToId(id, smooth !== false);
       setTimeout(() => {
         lock = false;
       }, 320);
@@ -1644,6 +1711,8 @@ function yearsList() {
 }
 
 const drums = [];
+let thenYearDrum = null;
+let nowYearDrum = null;
 let thenMonthDrum = null;
 let nowMonthDrum = null;
 
@@ -1703,18 +1772,15 @@ function boot(data) {
   const ydOpts = YARDS.map((y) => ({ id: y.id, label: y.name }));
 
   drums.length = 0;
-  drums.push(
-    mountDrum($("drumThenYear"), yOpts, state.thenYear, (id) => {
-      state.thenYear = Number(id);
-      renderAll();
-    })
-  );
-  drums.push(
-    mountDrum($("drumNowYear"), yOpts, state.nowYear, (id) => {
-      state.nowYear = Number(id);
-      renderAll();
-    })
-  );
+  thenYearDrum = mountDrum($("drumThenYear"), yOpts, state.thenYear, (id) => {
+    state.thenYear = Number(id);
+    renderAll();
+  });
+  nowYearDrum = mountDrum($("drumNowYear"), yOpts, state.nowYear, (id) => {
+    state.nowYear = Number(id);
+    renderAll();
+  });
+  drums.push(thenYearDrum, nowYearDrum);
   thenMonthDrum = mountDrum($("drumThenMonth"), mOpts, state.thenMonth, (id) => {
     state.thenMonth = Number(id);
     renderAll();
@@ -1727,12 +1793,14 @@ function boot(data) {
   drums.push(
     mountDrum($("drumItem"), iOpts, state.item, (id) => {
       state.item = String(id);
+      fitNowToPick();
       renderAll();
     })
   );
   drums.push(
     mountDrum($("drumYard"), ydOpts, state.yard, (id) => {
       state.yard = String(id);
+      fitNowToPick();
       renderAll();
     })
   );
